@@ -1,8 +1,4 @@
-/* ==========================================
-   QuizGuard – Full Question Bank (5 per difficulty)
-   Subjects: Math, English, Computer Science, Science
-   Difficulties: Easy, Medium, Hard
-   ========================================== */
+
 
 // ---------- QUESTION BANK (restructured) ----------
 const questionBank = {
@@ -101,7 +97,7 @@ const questionBank = {
 };
 
 // ---------- GLOBAL VARIABLES ----------
-let questions = [];         // will hold the 5 questions for current subject+difficulty
+let questions = [];
 let currentQuestion = 0;
 let score = 0;
 let penalties = 0;
@@ -109,6 +105,17 @@ let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
 const PENALTY_AMOUNT = 0.5;
+
+// Cup game timers
+let cupShuffleInterval = null;
+let cupTimerInterval = null;
+let cupBallIndex = 0;
+let cupTimeLeft = 5;
+
+// QTE game timer
+let qteInterval = null;
+let gauge = 100;
+let targetKey = "A";
 
 // ---------- HELPER ----------
 function getEl(id) { return document.getElementById(id); }
@@ -130,7 +137,6 @@ function startQuizApp() {
   const difficulty = getEl("difficultySelect").value;
   const selectedMinigame = getEl("minigameSelect").value;
 
-  // Load questions for chosen subject and difficulty
   questions = questionBank[subject][difficulty];
   if (!questions || questions.length === 0) {
     alert("No questions found for this subject and difficulty.");
@@ -157,10 +163,10 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty}`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | Minigame: ${gameMode}`);
 }
 
-// ---------- EDITOR FUNCTIONS (with difficulty support) ----------
+// ---------- EDITOR FUNCTIONS ----------
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -195,7 +201,6 @@ function renderQuestionEditor() {
     container.appendChild(div);
   });
 
-  // attach event listeners
   document.querySelectorAll('[data-field]').forEach(inp => {
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
@@ -249,7 +254,6 @@ function addNewQuestion() {
   });
   renderQuestionEditor();
   addLog("New question added.");
-  // clear fields
   getEl("newQuestionText").value = "";
   getEl("answer1").value = "";
   getEl("answer2").value = "";
@@ -311,6 +315,11 @@ function applyPenalty(reason) {
 }
 
 function endQuiz() {
+  // Clear all intervals to prevent background timers
+  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
+  if (cupTimerInterval) clearInterval(cupTimerInterval);
+  if (qteInterval) clearInterval(qteInterval);
+  
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
   getEl("finalScore").textContent = Math.max(score - penalties, 0).toFixed(1);
@@ -339,14 +348,18 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ---------- CUP GAME ----------
-let cupBallIndex = 0;
-let cupShuffleInterval;
-
+// ---------- CUP GAME WITH TIMER ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball";
-  getEl("gameDescription").textContent = "Track the correct cup continuously while answering questions.";
-  getEl("gameArea").innerHTML = `<div class="cups-container" id="cupsContainer"></div>`;
+  getEl("gameDescription").textContent = "Click the correct cup before the timer runs out. Correct clicks reset the timer.";
+  
+  getEl("gameArea").innerHTML = `
+    <div class="cups-container" id="cupsContainer"></div>
+    <div class="cup-timer" style="margin-top: 20px; font-size: 24px; font-weight: bold; text-align: center;">
+      Time left: <span id="cupTimeLeft">5.0</span>s
+    </div>
+  `;
+  
   const container = getEl("cupsContainer");
   for (let i = 0; i < 3; i++) {
     const cup = document.createElement("div");
@@ -354,9 +367,45 @@ function startCupGame() {
     cup.addEventListener("click", () => handleCupClick(i));
     container.appendChild(cup);
   }
+  
   shuffleBall();
+  
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   cupShuffleInterval = setInterval(() => shuffleBall(), 5000);
+  
+  if (cupTimerInterval) clearInterval(cupTimerInterval);
+  cupTimeLeft = 5;
+  updateCupTimerDisplay();
+  cupTimerInterval = setInterval(() => {
+    if (getEl("quizApp").style.display !== "flex") return;
+    cupTimeLeft -= 0.1;
+    if (cupTimeLeft <= 0) {
+      applyPenalty("Cup timer expired");
+      shuffleBall();
+      cupTimeLeft = 5;
+      addLog("Cup timer expired – ball moved, penalty applied.");
+    }
+    updateCupTimerDisplay();
+  }, 100);
+}
+
+function updateCupTimerDisplay() {
+  const timerSpan = getEl("cupTimeLeft");
+  if (timerSpan) timerSpan.textContent = cupTimeLeft.toFixed(1);
+}
+
+function handleCupClick(index) {
+  if (index === cupBallIndex) {
+    cupTimeLeft = 5;
+    updateCupTimerDisplay();
+    addLog("Correct cup clicked – timer reset.");
+    shuffleBall();
+  } else {
+    applyPenalty("Wrong cup selected");
+    cupTimeLeft = 5;
+    updateCupTimerDisplay();
+    shuffleBall();
+  }
 }
 
 function shuffleBall() {
@@ -366,44 +415,39 @@ function shuffleBall() {
   const ball = document.createElement("div");
   ball.className = "ball";
   cups[cupBallIndex].appendChild(ball);
-}
-
-function handleCupClick(index) {
-  if (index === cupBallIndex) {
-    addLog("Correct cup clicked.");
-  } else {
-    applyPenalty("Wrong cup selected");
-  }
-  shuffleBall();
+  addLog(`Ball moved to cup ${cupBallIndex + 1}`);
 }
 
 // ---------- QTE GAME ----------
-let gauge = 100;
-let targetKey = "A";
-let qteInterval;
-
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
   getEl("gameDescription").textContent = "Press the correct key continuously to keep the gauge alive.";
+  
   getEl("gameArea").innerHTML = `
     <div class="qte-container">
       <div class="target-key" id="targetKey"></div>
       <div class="gauge-box"><div class="gauge-fill" id="gaugeFill"></div></div>
     </div>
   `;
+  
   targetKey = randomLetter();
   getEl("targetKey").textContent = targetKey;
   gauge = 100;
+  const fill = getEl("gaugeFill");
+  if (fill) fill.style.width = gauge + "%";
+  
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
+    if (getEl("quizApp").style.display !== "flex") return;
     gauge -= 1;
-    const fill = getEl("gaugeFill");
-    if (fill) fill.style.width = gauge + "%";
+    const fillEl = getEl("gaugeFill");
+    if (fillEl) fillEl.style.width = gauge + "%";
     if (gauge <= 0) {
       gauge = 100;
       applyPenalty("Gauge emptied");
       targetKey = randomLetter();
-      getEl("targetKey").textContent = targetKey;
+      const targetEl = getEl("targetKey");
+      if (targetEl) targetEl.textContent = targetKey;
     }
   }, 100);
 }
@@ -419,6 +463,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key.toUpperCase() === targetKey) {
     gauge += 12;
     if (gauge > 100) gauge = 100;
+    const fillEl = getEl("gaugeFill");
+    if (fillEl) fillEl.style.width = gauge + "%";
     targetKey = randomLetter();
     const targetEl = getEl("targetKey");
     if (targetEl) targetEl.textContent = targetKey;
