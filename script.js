@@ -1,11 +1,13 @@
 /* ==========================================
    QuizGuard – Final Version
-   – No back button during active quiz
-   – Quiz reset properly hides results screen
-   – Tab minimize/switch applies penalty
+   – Score out of 100 (points per correct = 100 / total questions)
+   – Penalty = -5 points (minimum 0)
+   – QTE slower drain (‑1 per 100ms) & +35 on correct key
+   – Cup game gauge refills on correct click
+   – Tab switch penalty applied
    ========================================== */
 
-// ---------- QUESTION BANK (full 5 per difficulty) ----------
+// ---------- QUESTION BANK (5 per difficulty, 4 subjects) ----------
 const questionBank = {
   math: {
     easy: [
@@ -101,22 +103,22 @@ const questionBank = {
   }
 };
 
-// GLOBALS
+// ---------- GLOBAL VARIABLES ----------
 let questions = [];
 let currentQuestion = 0;
-let score = 0;
-let penalties = 0;
-let failures = 0;
-let tabSwitches = 0;
+let score = 0;            // out of 100
+let penalties = 0;        // count of penalties applied (for display)
+let failures = 0;         // count of minigame failures (for display)
+let tabSwitches = 0;      // number of times tab was hidden
 let gameMode = "cups";
-const PENALTY_AMOUNT = 0.5;
+let pointsPerCorrect = 10;  // dynamically calculated = 100 / number of questions
 
 // Cup game
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-let cupGaugeDecrement = 2;
+const CUP_GAUGE_DECREMENT = 2;  // per 100ms
 
 // QTE game
 let qteInterval = null;
@@ -126,7 +128,7 @@ let targetKey = "A";
 // Helper
 function getEl(id) { return document.getElementById(id); }
 
-// Logging
+// ---------- LOGGING ----------
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -137,7 +139,23 @@ function addLog(message) {
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
 
-// Cleanup & return home
+// ---------- PENALTY (deducts 5 points) ----------
+function applyPenalty(reason) {
+  penalties++;
+  failures++;
+  score = Math.max(0, score - 5);
+  updateStats();
+  addLog(`Penalty applied: ${reason} -5 points (now ${Math.floor(score)})`);
+}
+
+// ---------- UPDATE UI ----------
+function updateStats() {
+  getEl("score").textContent = Math.floor(score);
+  getEl("penalties").textContent = penalties;
+  getEl("tabSwitches").textContent = tabSwitches;
+}
+
+// ---------- CLEANUP & RETURN HOME ----------
 function cleanupAndReturnHome() {
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
@@ -148,27 +166,12 @@ function cleanupAndReturnHome() {
 }
 window.returnToHome = cleanupAndReturnHome;
 
-// Apply penalty
-function applyPenalty(reason) {
-  penalties += PENALTY_AMOUNT;
-  failures++;
-  updateStats();
-  addLog(`Penalty applied: ${reason}`);
-}
-
-function updateStats() {
-  getEl("score").textContent = Math.max(score - penalties, 0).toFixed(1);
-  getEl("penalties").textContent = penalties.toFixed(1);
-  getEl("tabSwitches").textContent = tabSwitches;
-}
-
-// Tab switch detection – now applies penalty when hidden
+// ---------- TAB SWITCH DETECTION (applies penalty) ----------
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
     applyPenalty("Tab switched/minimised");
     getEl("tabWarning").style.display = "flex";
-    addLog("Tab switch detected – penalty applied.");
     setTimeout(() => {
       if (getEl("tabWarning")) getEl("tabWarning").style.display = "none";
     }, 2000);
@@ -177,7 +180,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// Block copy/paste
+// ---------- BLOCK COPY/PASTE ----------
 ["copy", "paste", "cut"].forEach(ev => {
   document.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -202,6 +205,10 @@ function startQuizApp() {
   penalties = 0;
   failures = 0;
   tabSwitches = 0;
+  
+  // Each correct answer gives equal share of 100 points
+  pointsPerCorrect = 100 / questions.length;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
@@ -209,7 +216,6 @@ function startQuizApp() {
   // Reset UI: hide results, show quiz content
   getEl("quizContent").style.display = "block";
   getEl("resultsScreen").style.display = "none";
-
   getEl("homeScreen").style.display = "none";
   getEl("quizApp").style.display = "flex";
   updateStats();
@@ -218,7 +224,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | ${gameMode}`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | Max score 100 | Points per correct: ${pointsPerCorrect.toFixed(1)}`);
 }
 
 function loadQuestion() {
@@ -237,10 +243,11 @@ function loadQuestion() {
     btn.textContent = ans;
     btn.addEventListener("click", () => {
       if (idx === q.correct) {
-        score += 2;
-        addLog("Correct answer.");
+        score += pointsPerCorrect;
+        if (score > 100) score = 100;
+        addLog(`Correct answer! +${pointsPerCorrect.toFixed(1)} points (now ${Math.floor(score)})`);
       } else {
-        addLog("Wrong answer.");
+        addLog("Wrong answer. No points added.");
       }
       updateStats();
       currentQuestion++;
@@ -256,13 +263,13 @@ function endQuiz() {
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
-  getEl("finalScore").textContent = Math.max(score - penalties, 0).toFixed(1);
+  getEl("finalScore").textContent = Math.floor(score);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
-  addLog("Quiz finished.");
+  addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
 }
 
-// ---------- CUP GAME (gauge bar) ----------
+// ---------- CUP GAME WITH GAUGE ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
@@ -287,7 +294,7 @@ function startCupGame() {
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   cupTimerInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    cupGauge -= cupGaugeDecrement;
+    cupGauge -= CUP_GAUGE_DECREMENT;
     if (cupGauge < 0) cupGauge = 0;
     const fillEl = getEl("cupGaugeFill");
     if (fillEl) fillEl.style.width = cupGauge + "%";
@@ -305,7 +312,7 @@ function handleCupClick(index) {
     cupGauge = 100;
     const fill = getEl("cupGaugeFill");
     if (fill) fill.style.width = "100%";
-    addLog("Correct cup – gauge refilled.");
+    addLog("Correct cup clicked – gauge refilled.");
     shuffleBall();
   } else {
     applyPenalty("Wrong cup selected");
@@ -326,7 +333,7 @@ function shuffleBall() {
   addLog(`Ball moved to cup ${cupBallIndex+1}`);
 }
 
-// ---------- QTE GAME ----------
+// ---------- QTE GAME (slower drain + stronger refill) ----------
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
   getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
@@ -344,7 +351,7 @@ function startQTEGame() {
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    qteGauge -= 1;
+    qteGauge -= 1;         // slower drain (was 2)
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
@@ -367,17 +374,17 @@ document.addEventListener("keydown", (e) => {
   if (getEl("quizApp").style.display !== "flex") return;
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
-    qteGauge = Math.min(100, qteGauge + 35);
+    qteGauge = Math.min(100, qteGauge + 35);   // stronger refill (was 20)
     const fill = getEl("qteGaugeFill");
     if (fill) fill.style.width = qteGauge + "%";
     targetKey = randomLetter();
     const targetEl = getEl("targetKey");
     if (targetEl) targetEl.textContent = targetKey;
-    addLog(`Correct key: ${e.key.toUpperCase()}`);
+    addLog(`Correct key: ${e.key.toUpperCase()} (gauge now ${qteGauge}%)`);
   }
 });
 
-// ---------- EDITOR (unchanged, works with difficulty) ----------
+// ---------- EDITOR FUNCTIONS (unchanged, supports difficulty) ----------
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -438,14 +445,31 @@ function addNewQuestion() {
   const subject = getEl("editorSubjectSelect").value;
   const difficulty = getEl("editorDifficultySelect").value;
   const qText = getEl("newQuestionText").value;
-  const answers = [getEl("answer1").value, getEl("answer2").value, getEl("answer3").value, getEl("answer4").value];
+  const answers = [
+    getEl("answer1").value,
+    getEl("answer2").value,
+    getEl("answer3").value,
+    getEl("answer4").value
+  ];
   const correct = parseInt(getEl("correctAnswer").value);
-  if (!qText || answers.some(a => !a) || isNaN(correct)) { alert("Fill all fields"); return; }
-  questionBank[subject][difficulty].push({ question: qText, answers, correct });
+  if (!qText || answers.some(a => !a) || isNaN(correct)) {
+    alert("Please fill all fields.");
+    return;
+  }
+  questionBank[subject][difficulty].push({
+    question: qText,
+    answers: answers,
+    correct: correct
+  });
   renderQuestionEditor();
-  addLog("New question added");
+  addLog("New question added.");
   getEl("newQuestionText").value = "";
-  getEl("answer1").value = ""; getEl("answer2").value = ""; getEl("answer3").value = ""; getEl("answer4").value = "";
+  getEl("answer1").value = "";
+  getEl("answer2").value = "";
+  getEl("answer3").value = "";
+  getEl("answer4").value = "";
   getEl("correctAnswer").value = "";
 }
-function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])); }
+function escapeHtml(str) {
+  return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+}
