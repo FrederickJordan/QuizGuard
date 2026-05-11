@@ -1,5 +1,5 @@
 <!-- ========================= -->
-<!-- FULL index.html WITH DIFFICULTY SELECTOR IN EDITOR -->
+<!-- FULL index.html WITH BACK BUTTON IN QUIZ -->
 <!-- ========================= -->
 
 <!DOCTYPE html>
@@ -192,7 +192,6 @@
 
       </select>
 
-      <!-- NEW: difficulty selector for editor -->
       <select id="editorDifficultySelect"
               class="menu-select">
 
@@ -295,6 +294,9 @@
         <span id="tabSwitches">0</span>
       </div>
 
+      <!-- Back button added here -->
+      <button class="back-btn-quiz" id="backToHomeBtn" style="margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">← Back to Home</button>
+
     </div>
 
     <div class="question-box"
@@ -352,6 +354,9 @@
                 id="finalTabs"></span>
         </div>
 
+        <!-- Back button also here -->
+        <button class="home-btn start-btn" id="backFromResultsBtn" style="margin-top: 20px;">Back to Home</button>
+
       </div>
 
     </div>
@@ -384,6 +389,24 @@
 </div>
 
 <script src="script.js"></script>
+
+<script>
+  // Attach back button event listeners after DOM loads
+  document.addEventListener('DOMContentLoaded', () => {
+    const backBtn = document.getElementById('backToHomeBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        if (typeof window.returnToHome === 'function') window.returnToHome();
+      });
+    }
+    const backResultsBtn = document.getElementById('backFromResultsBtn');
+    if (backResultsBtn) {
+      backResultsBtn.addEventListener('click', () => {
+        if (typeof window.returnToHome === 'function') window.returnToHome();
+      });
+    }
+  });
+</script>
 
 </body>
 </html>
