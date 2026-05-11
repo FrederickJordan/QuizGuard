@@ -1,11 +1,5 @@
 /* ==========================================
-   QuizGuard – Final Version
-   – 10 questions per difficulty per subject (120 total)
-   – Score out of 100 (points per correct = 100 / questions.length)
-   – Penalty = -5 points (minimum 0)
-   – QTE slower drain (‑1 per 100ms) & +35 on correct key
-   – Cup game gauge refills on correct click
-   – Tab switch penalty applied
+   QuizGuard – Final Version with Gauge Warnings
    ========================================== */
 
 // ---------- EXPANDED QUESTION BANK (10 per difficulty) ----------
@@ -167,26 +161,51 @@ const questionBank = {
 // ---------- GLOBAL VARIABLES ----------
 let questions = [];
 let currentQuestion = 0;
-let score = 0;            // out of 100
-let penalties = 0;        // count of penalties applied (for display)
-let failures = 0;         // count of minigame failures (for display)
-let tabSwitches = 0;      // number of times tab was hidden
+let score = 0;
+let penalties = 0;
+let failures = 0;
+let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 20;  // dynamically calculated = 100 / number of questions
+let pointsPerCorrect = 10;
 
 // Cup game
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 1  
+const CUP_GAUGE_DECREMENT = 1;
+
 // QTE game
 let qteInterval = null;
 let qteGauge = 100;
 let targetKey = "A";
 
+// Warning cooldown
+let lastWarningTime = 0;
+const WARNING_COOLDOWN_MS = 2000; // 2 seconds
+
 // Helper
 function getEl(id) { return document.getElementById(id); }
+
+// ---------- GAUGE WARNING POPUP ----------
+function showGaugeWarning(message) {
+  const now = Date.now();
+  if (now - lastWarningTime < WARNING_COOLDOWN_MS) return;
+  lastWarningTime = now;
+
+  let warningDiv = document.getElementById('gaugeWarningPopup');
+  if (!warningDiv) {
+    warningDiv = document.createElement('div');
+    warningDiv.id = 'gaugeWarningPopup';
+    warningDiv.className = 'gauge-warning';
+    document.body.appendChild(warningDiv);
+  }
+  warningDiv.textContent = message;
+  warningDiv.style.opacity = '1';
+  setTimeout(() => {
+    if (warningDiv) warningDiv.style.opacity = '0';
+  }, 1000);
+}
 
 // ---------- LOGGING ----------
 function addLog(message) {
@@ -199,7 +218,7 @@ function addLog(message) {
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
 
-// ---------- PENALTY (deducts 5 points) ----------
+// ---------- PENALTY ----------
 function applyPenalty(reason) {
   penalties++;
   failures++;
@@ -226,7 +245,7 @@ function cleanupAndReturnHome() {
 }
 window.returnToHome = cleanupAndReturnHome;
 
-// ---------- TAB SWITCH DETECTION (applies penalty) ----------
+// ---------- TAB SWITCH DETECTION ----------
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
@@ -265,15 +284,12 @@ function startQuizApp() {
   penalties = 0;
   failures = 0;
   tabSwitches = 0;
-  
-  // Each correct answer gives equal share of 100 points
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
 
-  // Reset UI: hide results, show quiz content
   getEl("quizContent").style.display = "block";
   getEl("resultsScreen").style.display = "none";
   getEl("homeScreen").style.display = "none";
@@ -284,7 +300,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions | Max score 100 | Points per correct: ${pointsPerCorrect.toFixed(1)}`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions | Max score 100`);
 }
 
 function loadQuestion() {
@@ -329,7 +345,7 @@ function endQuiz() {
   addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
 }
 
-// ---------- CUP GAME WITH GAUGE ----------
+// ---------- CUP GAME ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
@@ -358,6 +374,12 @@ function startCupGame() {
     if (cupGauge < 0) cupGauge = 0;
     const fillEl = getEl("cupGaugeFill");
     if (fillEl) fillEl.style.width = cupGauge + "%";
+
+    // Warning when gauge <= 20
+    if (cupGauge <= 20 && cupGauge > 0) {
+      showGaugeWarning("⚠️ Cup gauge low! Click correct cup!");
+    }
+
     if (cupGauge <= 0) {
       applyPenalty("Cup gauge emptied (no correct click)");
       cupGauge = 100;
@@ -393,7 +415,7 @@ function shuffleBall() {
   addLog(`Ball moved to cup ${cupBallIndex+1}`);
 }
 
-// ---------- QTE GAME (slower drain + stronger refill) ----------
+// ---------- QTE GAME ----------
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
   getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
@@ -411,10 +433,16 @@ function startQTEGame() {
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    qteGauge -= 1;         // slower drain (was 2)
+    qteGauge -= 1;
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
+
+    // Warning when gauge <= 20
+    if (qteGauge <= 20 && qteGauge > 0) {
+      showGaugeWarning("⚠️ QTE gauge low! Press correct key!");
+    }
+
     if (qteGauge <= 0) {
       applyPenalty("QTE gauge emptied");
       qteGauge = 100;
@@ -434,7 +462,7 @@ document.addEventListener("keydown", (e) => {
   if (getEl("quizApp").style.display !== "flex") return;
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
-    qteGauge = Math.min(100, qteGauge + 35);   // stronger refill (was 20)
+    qteGauge = Math.min(100, qteGauge + 35);
     const fill = getEl("qteGaugeFill");
     if (fill) fill.style.width = qteGauge + "%";
     targetKey = randomLetter();
@@ -444,7 +472,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ---------- EDITOR FUNCTIONS (unchanged, supports difficulty) ----------
+// ---------- EDITOR FUNCTIONS (unchanged) ----------
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
