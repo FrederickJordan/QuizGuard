@@ -179,8 +179,7 @@ let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 2;  // per 100ms
-
+const CUP_GAUGE_DECREMENT = 1  
 // QTE game
 let qteInterval = null;
 let qteGauge = 100;
