@@ -3,450 +3,128 @@ const questionBank = {
   math: {
 
     easy: [
-      {
-        question: "What is 5 + 7?",
-        answers: ["12", "10", "13", "14"],
-        correct: 0
-      },
-      {
-        question: "What is 9 × 3?",
-        answers: ["18", "27", "21", "24"],
-        correct: 1
-      },
-      {
-        question: "What is 81 ÷ 9?",
-        answers: ["7", "8", "9", "6"],
-        correct: 2
-      },
-      {
-        question: "What is 15 - 6?",
-        answers: ["7", "8", "9", "10"],
-        correct: 2
-      },
-      {
-        question: "What is 14 + 5?",
-        answers: ["18", "19", "20", "21"],
-        correct: 1
-      }
+      { question: "What is 5 + 7?", answers: ["12", "10", "13", "14"], correct: 0 },
+      { question: "What is 9 × 3?", answers: ["18", "27", "21", "24"], correct: 1 },
+      { question: "What is 81 ÷ 9?", answers: ["7", "8", "9", "6"], correct: 2 },
+      { question: "What is 15 - 6?", answers: ["7", "8", "9", "10"], correct: 2 },
+      { question: "What is 14 + 5?", answers: ["18", "19", "20", "21"], correct: 1 }
     ],
 
     medium: [
-      {
-        question: "Solve: 12²",
-        answers: ["124", "132", "144", "154"],
-        correct: 2
-      },
-      {
-        question: "What is the value of π rounded to 2 decimals?",
-        answers: ["3.12", "3.14", "3.16", "3.18"],
-        correct: 1
-      },
-      {
-        question: "What is 20% of 250?",
-        answers: ["40", "45", "50", "55"],
-        correct: 2
-      },
-      {
-        question: "Solve: 7 × 8 - 12",
-        answers: ["44", "46", "48", "50"],
-        correct: 0
-      },
-      {
-        question: "What is the square root of 169?",
-        answers: ["11", "12", "13", "14"],
-        correct: 2
-      }
+      { question: "Solve: 12²", answers: ["124", "132", "144", "154"], correct: 2 },
+      { question: "Value of π (2dp)?", answers: ["3.12", "3.14", "3.16", "3.18"], correct: 1 },
+      { question: "20% of 250?", answers: ["40", "45", "50", "55"], correct: 2 },
+      { question: "7 × 8 - 12?", answers: ["44", "46", "48", "50"], correct: 0 },
+      { question: "√169?", answers: ["11", "12", "13", "14"], correct: 2 }
     ],
 
     hard: [
-      {
-        question: "What is the derivative of x²?",
-        answers: ["x", "2x", "x²", "2"],
-        correct: 1
-      },
-      {
-        question: "What is the integral of 2x?",
-        answers: ["x² + C", "2x² + C", "x + C", "2 + C"],
-        correct: 0
-      },
-      {
-        question: "Solve for x: 2x + 6 = 18",
-        answers: ["4", "5", "6", "7"],
-        correct: 2
-      },
-      {
-        question: "What is sin(90°)?",
-        answers: ["0", "0.5", "1", "-1"],
-        correct: 2
-      },
-      {
-        question: "What is the value of log₁₀(100)?",
-        answers: ["1", "2", "10", "100"],
-        correct: 1
-      }
+      { question: "Derivative of x²?", answers: ["x", "2x", "x²", "2"], correct: 1 },
+      { question: "Integral of 2x?", answers: ["x² + C", "2x² + C", "x + C", "2 + C"], correct: 0 },
+      { question: "Solve: 2x + 6 = 18", answers: ["4", "5", "6", "7"], correct: 2 },
+      { question: "sin(90°)?", answers: ["0", "0.5", "1", "-1"], correct: 2 },
+      { question: "log₁₀(100)?", answers: ["1", "2", "10", "100"], correct: 1 }
     ]
   },
 
   english: {
-
     easy: [
-      {
-        question: "Choose the correct spelling.",
-        answers: ["Recieve", "Receive", "Receeve", "Receve"],
-        correct: 1
-      },
-      {
-        question: "Choose the synonym of 'happy'.",
-        answers: ["Sad", "Angry", "Joyful", "Weak"],
-        correct: 2
-      },
-      {
-        question: "What is the opposite of 'cold'?",
-        answers: ["Warm", "Cool", "Wet", "Soft"],
-        correct: 0
-      },
-      {
-        question: "Which is a noun?",
-        answers: ["Run", "Beautiful", "Table", "Quickly"],
-        correct: 2
-      },
-      {
-        question: "Choose the correct article: ___ apple",
-        answers: ["A", "An", "The", "No article"],
-        correct: 1
-      }
+      { question: "Correct spelling?", answers: ["Recieve", "Receive", "Receeve", "Receve"], correct: 1 },
+      { question: "Synonym of happy?", answers: ["Sad", "Angry", "Joyful", "Weak"], correct: 2 },
+      { question: "Opposite of cold?", answers: ["Warm", "Cool", "Wet", "Soft"], correct: 0 },
+      { question: "Which is noun?", answers: ["Run", "Beautiful", "Table", "Quickly"], correct: 2 },
+      { question: "___ apple", answers: ["A", "An", "The", "None"], correct: 1 }
     ],
-
     medium: [
-      {
-        question: "Choose the synonym of 'rapid'.",
-        answers: ["Slow", "Fast", "Weak", "Calm"],
-        correct: 1
-      },
-      {
-        question: "Identify the adjective.",
-        answers: ["Quickly", "Blue", "Run", "Jump"],
-        correct: 1
-      },
-      {
-        question: "Which sentence is grammatically correct?",
-        answers: [
-          "She go to school.",
-          "She goes to school.",
-          "She going to school.",
-          "She gone to school."
-        ],
-        correct: 1
-      },
-      {
-        question: "What is the past tense of 'write'?",
-        answers: ["Written", "Writing", "Wrote", "Writes"],
-        correct: 2
-      },
-      {
-        question: "Choose the antonym of 'expand'.",
-        answers: ["Increase", "Stretch", "Shrink", "Grow"],
-        correct: 2
-      }
+      { question: "Synonym of rapid?", answers: ["Slow", "Fast", "Weak", "Calm"], correct: 1 },
+      { question: "Adjective?", answers: ["Quickly", "Blue", "Run", "Jump"], correct: 1 },
+      { question: "Correct sentence?", answers: ["She go school", "She goes school", "She goes to school", "She going school"], correct: 2 },
+      { question: "Past tense of write?", answers: ["Written", "Writing", "Wrote", "Writes"], correct: 2 },
+      { question: "Antonym of expand?", answers: ["Increase", "Stretch", "Shrink", "Grow"], correct: 2 }
     ],
-
     hard: [
-      {
-        question: "Identify the literary device: 'Time is a thief.'",
-        answers: ["Simile", "Metaphor", "Hyperbole", "Irony"],
-        correct: 1
-      },
-      {
-        question: "What is the meaning of 'ubiquitous'?",
-        answers: ["Rare", "Everywhere", "Dangerous", "Hidden"],
-        correct: 1
-      },
-      {
-        question: "Choose the correctly punctuated sentence.",
-        answers: [
-          "Lets eat grandma!",
-          "Let's eat grandma!",
-          "Lets eat, grandma!",
-          "Let's eat, grandma!"
-        ],
-        correct: 3
-      },
-      {
-        question: "Which word is an adverb?",
-        answers: ["Beautiful", "Happiness", "Swiftly", "Bright"],
-        correct: 2
-      },
-      {
-        question: "What type of sentence gives a command?",
-        answers: ["Declarative", "Interrogative", "Imperative", "Exclamatory"],
-        correct: 2
-      }
+      { question: "‘Time is a thief’ is?", answers: ["Simile", "Metaphor", "Hyperbole", "Irony"], correct: 1 },
+      { question: "Ubiquitous means?", answers: ["Rare", "Everywhere", "Dangerous", "Hidden"], correct: 1 },
+      { question: "Correct punctuation?", answers: ["Lets eat grandma", "Let's eat grandma", "Lets eat, grandma", "Let's eat, grandma"], correct: 3 },
+      { question: "Adverb?", answers: ["Beautiful", "Happiness", "Swiftly", "Bright"], correct: 2 },
+      { question: "Command sentence?", answers: ["Declarative", "Interrogative", "Imperative", "Exclamatory"], correct: 2 }
     ]
   },
 
   computer_science: {
-
     easy: [
-      {
-        question: "What does CPU stand for?",
-        answers: [
-          "Central Process Unit",
-          "Central Processing Unit",
-          "Computer Personal Unit",
-          "Central Power Unit"
-        ],
-        correct: 1
-      },
-      {
-        question: "Which device is used for input?",
-        answers: ["Monitor", "Keyboard", "Speaker", "Projector"],
-        correct: 1
-      },
-      {
-        question: "Which one is software?",
-        answers: ["Mouse", "Keyboard", "Windows", "CPU"],
-        correct: 2
-      },
-      {
-        question: "Binary uses which two digits?",
-        answers: ["1 and 2", "0 and 1", "2 and 3", "8 and 9"],
-        correct: 1
-      },
-      {
-        question: "Which company created Windows?",
-        answers: ["Apple", "Google", "Microsoft", "Intel"],
-        correct: 2
-      }
+      { question: "CPU stands for?", answers: ["Central Process Unit", "Central Processing Unit", "Computer Unit", "Central Power Unit"], correct: 1 },
+      { question: "Input device?", answers: ["Monitor", "Keyboard", "Speaker", "Printer"], correct: 1 },
+      { question: "Software?", answers: ["Mouse", "Keyboard", "Windows", "CPU"], correct: 2 },
+      { question: "Binary digits?", answers: ["1 and 2", "0 and 1", "2 and 3", "8 and 9"], correct: 1 },
+      { question: "Windows created by?", answers: ["Apple", "Google", "Microsoft", "Intel"], correct: 2 }
     ],
-
     medium: [
-      {
-        question: "Which data structure uses FIFO?",
-        answers: ["Stack", "Queue", "Tree", "Graph"],
-        correct: 1
-      },
-      {
-        question: "HTML is mainly used for?",
-        answers: ["Styling", "Programming", "Structuring webpages", "Databases"],
-        correct: 2
-      },
-      {
-        question: "Which language is primarily used for web styling?",
-        answers: ["HTML", "Java", "CSS", "Python"],
-        correct: 2
-      },
-      {
-        question: "What does RAM stand for?",
-        answers: [
-          "Random Access Memory",
-          "Read Access Memory",
-          "Rapid Access Module",
-          "Run Access Memory"
-        ],
-        correct: 0
-      },
-      {
-        question: "Which symbol is used for comments in JavaScript?",
-        answers: ["//", "##", "<!--", "**"],
-        correct: 0
-      }
+      { question: "FIFO structure?", answers: ["Stack", "Queue", "Tree", "Graph"], correct: 1 },
+      { question: "HTML used for?", answers: ["Styling", "Logic", "Structure", "Database"], correct: 2 },
+      { question: "CSS used for?", answers: ["Structure", "Styling", "Database", "CPU"], correct: 1 },
+      { question: "RAM stands for?", answers: ["Random Access Memory", "Read Access Memory", "Run Memory", "Rapid Access"], correct: 0 },
+      { question: "JS comment?", answers: ["//", "##", "<!--", "**"], correct: 0 }
     ],
-
     hard: [
-      {
-        question: "What is the time complexity of binary search?",
-        answers: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-        correct: 1
-      },
-      {
-        question: "Which protocol is used for secure web browsing?",
-        answers: ["HTTP", "FTP", "HTTPS", "SMTP"],
-        correct: 2
-      },
-      {
-        question: "Which data structure uses LIFO?",
-        answers: ["Queue", "Stack", "Array", "Tree"],
-        correct: 1
-      },
-      {
-        question: "What does SQL stand for?",
-        answers: [
-          "Structured Query Language",
-          "Simple Query Language",
-          "Sequential Query Logic",
-          "Structured Queue Logic"
-        ],
-        correct: 0
-      },
-      {
-        question: "Which sorting algorithm is generally fastest for large datasets?",
-        answers: ["Bubble Sort", "Selection Sort", "Quick Sort", "Insertion Sort"],
-        correct: 2
-      }
+      { question: "Binary search complexity?", answers: ["O(n)", "O(log n)", "O(n²)", "O(1)"], correct: 1 },
+      { question: "Secure protocol?", answers: ["HTTP", "FTP", "HTTPS", "SMTP"], correct: 2 },
+      { question: "LIFO structure?", answers: ["Queue", "Stack", "Array", "Tree"], correct: 1 },
+      { question: "SQL stands for?", answers: ["Structured Query Language", "Simple Query Language", "System Query Logic", "None"], correct: 0 },
+      { question: "Fast sorting?", answers: ["Bubble", "Selection", "Quick Sort", "Insertion"], correct: 2 }
     ]
   },
 
   science: {
-
     easy: [
-      {
-        question: "What planet is called the Red Planet?",
-        answers: ["Mars", "Venus", "Mercury", "Saturn"],
-        correct: 0
-      },
-      {
-        question: "What gas do humans breathe in?",
-        answers: ["Carbon Dioxide", "Nitrogen", "Oxygen", "Helium"],
-        correct: 2
-      },
-      {
-        question: "What is H2O commonly known as?",
-        answers: ["Salt", "Hydrogen", "Water", "Oxygen"],
-        correct: 2
-      },
-      {
-        question: "How many legs does an insect have?",
-        answers: ["4", "6", "8", "10"],
-        correct: 1
-      },
-      {
-        question: "Which star is closest to Earth?",
-        answers: ["Sirius", "Polaris", "The Sun", "Betelgeuse"],
-        correct: 2
-      }
+      { question: "Red planet?", answers: ["Mars", "Venus", "Earth", "Jupiter"], correct: 0 },
+      { question: "Breathing gas?", answers: ["CO2", "Oxygen", "Hydrogen", "Helium"], correct: 1 },
+      { question: "H2O?", answers: ["Salt", "Water", "Gas", "Oxygen"], correct: 1 },
+      { question: "Insect legs?", answers: ["4", "6", "8", "10"], correct: 1 },
+      { question: "Closest star?", answers: ["Sirius", "Sun", "Moon", "Mars"], correct: 1 }
     ],
-
     medium: [
-      {
-        question: "What is the chemical symbol for gold?",
-        answers: ["Ag", "Au", "Gd", "Go"],
-        correct: 1
-      },
-      {
-        question: "What force keeps planets in orbit?",
-        answers: ["Magnetism", "Gravity", "Friction", "Electricity"],
-        correct: 1
-      },
-      {
-        question: "What part of the cell contains DNA?",
-        answers: ["Nucleus", "Membrane", "Cytoplasm", "Ribosome"],
-        correct: 0
-      },
-      {
-        question: "Which blood type is known as the universal donor?",
-        answers: ["A", "B", "AB", "O negative"],
-        correct: 3
-      },
-      {
-        question: "What is the boiling point of water at sea level?",
-        answers: ["90°C", "95°C", "100°C", "110°C"],
-        correct: 2
-      }
+      { question: "Gold symbol?", answers: ["Ag", "Au", "Gd", "Go"], correct: 1 },
+      { question: "Gravity causes?", answers: ["Orbit", "Noise", "Heat", "Light"], correct: 0 },
+      { question: "DNA found in?", answers: ["Nucleus", "Membrane", "Wall", "Skin"], correct: 0 },
+      { question: "Universal donor?", answers: ["A", "B", "AB", "O-"], correct: 3 },
+      { question: "Water boils at?", answers: ["90", "95", "100", "110"], correct: 2 }
     ],
-
     hard: [
-      {
-        question: "What particle has a negative charge?",
-        answers: ["Proton", "Neutron", "Electron", "Photon"],
-        correct: 2
-      },
-      {
-        question: "Which law states that every action has an equal and opposite reaction?",
-        answers: [
-          "Newton's First Law",
-          "Newton's Second Law",
-          "Newton's Third Law",
-          "Law of Gravity"
-        ],
-        correct: 2
-      },
-      {
-        question: "What is the speed of light approximately?",
-        answers: [
-          "300,000 km/s",
-          "150,000 km/s",
-          "30,000 km/s",
-          "3,000 km/s"
-        ],
-        correct: 0
-      },
-      {
-        question: "What is the pH value of a neutral substance?",
-        answers: ["0", "5", "7", "14"],
-        correct: 2
-      },
-      {
-        question: "Which organ pumps blood around the body?",
-        answers: ["Lungs", "Liver", "Brain", "Heart"],
-        correct: 3
-      }
+      { question: "Negative particle?", answers: ["Proton", "Neutron", "Electron", "Photon"], correct: 2 },
+      { question: "Newton 3rd law?", answers: ["Inertia", "F=ma", "Action-reaction", "Gravity"], correct: 2 },
+      { question: "Speed of light?", answers: ["300k km/s", "150k", "30k", "3k"], correct: 0 },
+      { question: "Neutral pH?", answers: ["0", "5", "7", "14"], correct: 2 },
+      { question: "Blood pump?", answers: ["Lungs", "Heart", "Brain", "Liver"], correct: 1 }
     ]
   }
 };
 
-let questions = [];
+/* ================= STATE ================= */
 
+let questions = [];
 let currentQuestion = 0;
 let score = 0;
 let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
-
 let gameMode = "cups";
 
-const PENALTY_AMOUNT = 0.5;
+const PENALTY = 0.5;
 
-/* ================================= */
-/* HELPER */
-/* ================================= */
+/* ================= HELPERS ================= */
 
-function getEl(id) {
-  return document.getElementById(id);
-}
+const $ = (id) => document.getElementById(id);
 
-/* ================================= */
-/* LOG SYSTEM */
-/* ================================= */
-
-function addLog(message) {
-
-  const logArea = getEl("logArea");
-
-  if (!logArea) return;
-
-  const time =
-    new Date().toLocaleTimeString();
-
-  const entry =
-    document.createElement("div");
-
-  entry.innerHTML =
-    `<strong>[${time}]</strong> ${message}`;
-
-  logArea.prepend(entry);
-
-  while (logArea.children.length > 10) {
-    logArea.removeChild(logArea.lastChild);
-  }
-}
-
-/* ================================= */
-/* HOME SCREEN */
-/* ================================= */
+/* ================= HOME ================= */
 
 function startQuizApp() {
 
-  const subject =
-    getEl("subjectSelect").value;
+  const subject = $("subjectSelect").value;
+  const difficulty = $("difficultySelect").value;
+  const minigame = $("minigameSelect").value;
 
-  const selectedMinigame =
-    getEl("minigameSelect").value;
-
-const difficulty =
-  getEl("difficultySelect").value;
-
-questions =
-  questionBank[subject][difficulty];
+  questions = questionBank[subject][difficulty];
 
   currentQuestion = 0;
   score = 0;
@@ -454,477 +132,224 @@ questions =
   failures = 0;
   tabSwitches = 0;
 
-  if (selectedMinigame === "random") {
+  gameMode = (minigame === "random")
+    ? (Math.random() < 0.5 ? "cups" : "qte")
+    : minigame;
 
-    gameMode =
-      Math.random() < 0.5 ? "cups" : "qte";
+  $("homeScreen").style.display = "none";
+  $("quizApp").style.display = "flex";
 
-  } else {
-
-    gameMode = selectedMinigame;
-  }
-
-  getEl("homeScreen").style.display = "none";
-
-  getEl("quizApp").style.display = "flex";
-
-  updateStats();
-
+  updateUI();
   loadQuestion();
 
-  if (gameMode === "cups") {
-    startCupGame();
-  } else {
-    startQTEGame();
-  }
+  (gameMode === "cups") ? startCupGame() : startQTE();
 
-  addLog("Quiz started.");
+  log("Quiz started");
 }
 
-function openQuestionEditor() {
-
-  getEl("homeScreen").style.display = "none";
-
-  getEl("editorScreen").style.display = "block";
-
-  renderQuestionEditor();
-}
-
-function closeQuestionEditor() {
-
-  getEl("editorScreen").style.display = "none";
-
-  getEl("homeScreen").style.display = "flex";
-}
-
-/* ================================= */
-/* QUESTION EDITOR */
-/* ================================= */
-
-function renderQuestionEditor() {
-
-  const subject =
-    getEl("editorSubjectSelect").value;
-
-  const container =
-    getEl("questionEditorList");
-
-  container.innerHTML = "";
-
-  questionBank[subject].forEach((q, index) => {
-
-    const div =
-      document.createElement("div");
-
-    div.className =
-      "question-edit-card";
-
-    div.innerHTML = `
-
-      <input type="text"
-             value="${q.question}"
-             onchange="updateQuestion('${subject}', ${index}, 'question', this.value)">
-
-      <input type="text"
-             value="${q.answers[0]}"
-             onchange="updateAnswer('${subject}', ${index}, 0, this.value)">
-
-      <input type="text"
-             value="${q.answers[1]}"
-             onchange="updateAnswer('${subject}', ${index}, 1, this.value)">
-
-      <input type="text"
-             value="${q.answers[2]}"
-             onchange="updateAnswer('${subject}', ${index}, 2, this.value)">
-
-      <input type="text"
-             value="${q.answers[3]}"
-             onchange="updateAnswer('${subject}', ${index}, 3, this.value)">
-
-      <input type="number"
-             value="${q.correct}"
-             min="0"
-             max="3"
-             onchange="updateQuestion('${subject}', ${index}, 'correct', parseInt(this.value))">
-
-    `;
-
-    container.appendChild(div);
-  });
-}
-
-function updateQuestion(subject, index, field, value) {
-
-  questionBank[subject][index][field] =
-    value;
-
-  addLog("Question updated.");
-}
-
-function updateAnswer(subject, index, answerIndex, value) {
-
-  questionBank[subject][index]
-    .answers[answerIndex] = value;
-
-  addLog("Answer updated.");
-}
-
-function addNewQuestion() {
-
-  const subject =
-    getEl("editorSubjectSelect").value;
-
-  const question =
-    getEl("newQuestionText").value;
-
-  const answers = [
-
-    getEl("answer1").value,
-    getEl("answer2").value,
-    getEl("answer3").value,
-    getEl("answer4").value
-
-  ];
-
-  const correct =
-    parseInt(getEl("correctAnswer").value);
-
-  questionBank[subject].push({
-    question,
-    answers,
-    correct
-  });
-
-  renderQuestionEditor();
-
-  addLog("New question added.");
-
-  getEl("newQuestionText").value = "";
-  getEl("answer1").value = "";
-  getEl("answer2").value = "";
-  getEl("answer3").value = "";
-  getEl("answer4").value = "";
-  getEl("correctAnswer").value = "";
-}
-
-/* ================================= */
-/* QUIZ SYSTEM */
-/* ================================= */
+/* ================= QUIZ ================= */
 
 function loadQuestion() {
 
-  if (currentQuestion >= questions.length) {
+  if (currentQuestion >= questions.length) return endQuiz();
 
-    endQuiz();
+  const q = questions[currentQuestion];
 
-    return;
-  }
+  $("questionNumber").textContent =
+    `Question ${currentQuestion + 1}/${questions.length}`;
 
-  const q =
-    questions[currentQuestion];
+  $("questionText").textContent = q.question;
+  $("answersContainer").innerHTML = "";
 
-  getEl("questionNumber").textContent =
-    `Question ${currentQuestion + 1} / ${questions.length}`;
+  q.answers.forEach((a, i) => {
 
-  getEl("questionText").textContent =
-    q.question;
+    const btn = document.createElement("button");
+    btn.className = "answer-btn";
+    btn.textContent = a;
 
-  getEl("answersContainer").innerHTML = "";
+    btn.onclick = () => {
 
-  q.answers.forEach((answer, index) => {
-
-    const btn =
-      document.createElement("button");
-
-    btn.className =
-      "answer-btn";
-
-    btn.textContent =
-      answer;
-
-    btn.addEventListener("click", () => {
-
-      if (index === q.correct) {
-
+      if (i === q.correct) {
         score += 2;
-
-        addLog("Correct answer selected.");
-
+        log("Correct");
       } else {
-
-        addLog("Wrong answer selected.");
+        log("Wrong");
       }
 
-      updateStats();
-
       currentQuestion++;
-
+      updateUI();
       loadQuestion();
-    });
+    };
 
-    getEl("answersContainer")
-      .appendChild(btn);
+    $("answersContainer").appendChild(btn);
   });
 }
 
-function updateStats() {
+/* ================= MINIGAMES ================= */
 
-  getEl("score").textContent =
-    Math.max(score - penalties, 0).toFixed(1);
-
-  getEl("penalties").textContent =
-    penalties.toFixed(1);
-
-  getEl("tabSwitches").textContent =
-    tabSwitches;
-}
-
-function applyPenalty(reason) {
-
-  penalties += PENALTY_AMOUNT;
-
-  failures++;
-
-  updateStats();
-
-  addLog(`Penalty applied: ${reason}`);
-}
-
-function endQuiz() {
-
-  getEl("quizContent").style.display =
-    "none";
-
-  getEl("resultsScreen").style.display =
-    "block";
-
-  getEl("finalScore").textContent =
-    Math.max(score - penalties, 0).toFixed(1);
-
-  getEl("finalFailures").textContent =
-    failures;
-
-  getEl("finalTabs").textContent =
-    tabSwitches;
-
-  addLog("Quiz completed.");
-}
-
-/* ================================= */
-/* BLOCK COPY PASTE */
-/* ================================= */
-
-["copy", "paste", "cut"].forEach(eventName => {
-
-  document.addEventListener(eventName, (e) => {
-
-    e.preventDefault();
-
-    addLog(`${eventName} blocked`);
-  });
-});
-
-/* ================================= */
-/* TAB SWITCH DETECTION */
-/* ================================= */
-
-document.addEventListener("visibilitychange", () => {
-
-  if (document.hidden) {
-
-    tabSwitches++;
-
-    updateStats();
-
-    getEl("tabWarning").style.display =
-      "flex";
-
-    addLog("Tab switch detected.");
-
-  } else {
-
-    getEl("tabWarning").style.display =
-      "none";
-  }
-});
-
-/* ================================= */
-/* CUP GAME */
-/* ================================= */
-
-let cupBallIndex = 0;
+let cupIndex = 0;
 
 function startCupGame() {
 
-  getEl("gameTitle").textContent =
-    "Find The Ball";
+  $("gameTitle").textContent = "Find Ball";
+  $("gameDescription").textContent = "Click correct cup";
 
-  getEl("gameDescription").textContent =
-    "Track the correct cup continuously while answering questions.";
-
-  getEl("gameArea").innerHTML = `
-
-    <div>
-
-      <div class="cups-container"
-           id="cupsContainer">
-      </div>
-
+  $("gameArea").innerHTML = `
+    <div class="cups-container">
+      <div class="cup"></div>
+      <div class="cup"></div>
+      <div class="cup"></div>
     </div>
-
   `;
 
-  const container =
-    getEl("cupsContainer");
-
-  for (let i = 0; i < 3; i++) {
-
-    const cup =
-      document.createElement("div");
-
-    cup.className = "cup";
-
-    cup.addEventListener("click",
-      () => handleCupClick(i));
-
-    container.appendChild(cup);
-  }
-
-  shuffleBall();
-
-  setInterval(() => {
-
-    shuffleBall();
-
-  }, 5000);
-}
-
-function shuffleBall() {
-
-  const cups =
-    document.querySelectorAll(".cup");
-
-  cups.forEach(cup => {
-    cup.innerHTML = "";
+  document.querySelectorAll(".cup").forEach((c, i) => {
+    c.onclick = () => {
+      if (i === cupIndex) log("Cup correct");
+      else penalty("Cup wrong");
+      shuffle();
+    };
   });
 
-  cupBallIndex =
-    Math.floor(Math.random() * 3);
+  setInterval(shuffle, 4000);
+  shuffle();
+}
 
-  const ball =
-    document.createElement("div");
+function shuffle() {
 
+  const cups = document.querySelectorAll(".cup");
+  cups.forEach(c => c.innerHTML = "");
+
+  cupIndex = Math.floor(Math.random() * 3);
+
+  const ball = document.createElement("div");
   ball.className = "ball";
 
-  cups[cupBallIndex]
-    .appendChild(ball);
+  cups[cupIndex].appendChild(ball);
 }
 
-function handleCupClick(index) {
+/* QTE */
 
-  if (index === cupBallIndex) {
-
-    addLog("Correct cup clicked.");
-
-  } else {
-
-    applyPenalty("Wrong cup selected");
-  }
-
-  shuffleBall();
-}
-
-/* ================================= */
-/* QTE GAME */
-/* ================================= */
-
+let key = "A";
 let gauge = 100;
-let targetKey = "A";
 
-function startQTEGame() {
+function startQTE() {
 
-  getEl("gameTitle").textContent =
-    "QTE Pressure Gauge";
+  $("gameTitle").textContent = "QTE";
+  $("gameDescription").textContent = "Press key fast";
 
-  getEl("gameDescription").textContent =
-    "Press the correct key continuously to keep the gauge alive.";
-
-  getEl("gameArea").innerHTML = `
-
+  $("gameArea").innerHTML = `
     <div class="qte-container">
-
-      <div class="target-key"
-           id="targetKey">
-      </div>
-
-      <div class="gauge-box">
-
-        <div class="gauge-fill"
-             id="gaugeFill">
-        </div>
-
-      </div>
-
+      <div class="target-key" id="tk"></div>
+      <div class="gauge-box"><div class="gauge-fill" id="gf"></div></div>
     </div>
-
   `;
 
-  targetKey = randomLetter();
-
-  getEl("targetKey").textContent =
-    targetKey;
-
-  gauge = 100;
+  key = randomKey();
+  $("tk").textContent = key;
 
   setInterval(() => {
 
     gauge -= 1;
 
-    getEl("gaugeFill").style.width =
-      gauge + "%";
+    $("gf").style.width = gauge + "%";
 
     if (gauge <= 0) {
-
       gauge = 100;
-
-      applyPenalty("Gauge emptied");
-
-      targetKey = randomLetter();
-
-      getEl("targetKey").textContent =
-        targetKey;
+      penalty("Gauge empty");
     }
 
-  }, 100);
+  }, 120);
 }
 
-function randomLetter() {
-
-  const letters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-  return letters[
-    Math.floor(Math.random() * letters.length)
-  ];
+function randomKey() {
+  return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
 }
 
-document.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", e => {
 
   if (gameMode !== "qte") return;
 
-  if (e.key.toUpperCase() === targetKey) {
+  if (e.key.toUpperCase() === key) {
 
-    gauge += 12;
-
-    if (gauge > 100) {
-      gauge = 100;
-    }
-
-    targetKey = randomLetter();
-
-    getEl("targetKey").textContent =
-      targetKey;
-
-    addLog(`Correct key pressed: ${e.key.toUpperCase()}`);
+    gauge = Math.min(100, gauge + 10);
+    key = randomKey();
+    $("tk").textContent = key;
   }
 });
+
+/* ================= PENALTY ================= */
+
+function penalty(reason) {
+  penalties += PENALTY;
+  failures++;
+  log("Penalty: " + reason);
+  updateUI();
+}
+
+/* ================= UI ================= */
+
+function updateUI() {
+
+  $("score").textContent = Math.max(score - penalties, 0).toFixed(1);
+  $("penalties").textContent = penalties.toFixed(1);
+  $("tabSwitches").textContent = tabSwitches;
+}
+
+function endQuiz() {
+
+  $("quizContent").style.display = "none";
+  $("resultsScreen").style.display = "block";
+
+  $("finalScore").textContent = Math.max(score - penalties, 0).toFixed(1);
+  $("finalFailures").textContent = failures;
+  $("finalTabs").textContent = tabSwitches;
+}
+
+/* ================= LOG ================= */
+
+function log(msg) {
+
+  const logArea = $("logArea");
+  if (!logArea) return;
+
+  const div = document.createElement("div");
+  div.textContent = msg;
+
+  logArea.prepend(div);
+
+  if (logArea.children.length > 10)
+    logArea.removeChild(logArea.lastChild);
+}
+
+/* ================= ANTI CHEAT ================= */
+
+document.addEventListener("visibilitychange", () => {
+
+  if (document.hidden) {
+    tabSwitches++;
+    $("tabWarning").style.display = "flex";
+  } else {
+    $("tabWarning").style.display = "none";
+  }
+
+  updateUI();
+});
+
+["copy", "paste", "cut"].forEach(ev => {
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    log(ev + " blocked");
+  });
+});
+
+/* ================= EDITOR (simple placeholder hooks) ================= */
+
+function openQuestionEditor() {
+  $("homeScreen").style.display = "none";
+  $("editorScreen").style.display = "block";
+}
+
+function closeQuestionEditor() {
+  $("editorScreen").style.display = "none";
+  $("homeScreen").style.display = "flex";
+}
