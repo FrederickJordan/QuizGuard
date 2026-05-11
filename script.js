@@ -1,6 +1,11 @@
+/* ==========================================
+   QuizGuard – Full Question Bank (5 per difficulty)
+   Cup game now has a visual gauge bar that depletes.
+   Penalty when gauge empties (no correct click in time).
+   Back button to return to home with cleanup.
+   ========================================== */
 
-
-// ---------- QUESTION BANK (restructured) ----------
+// ---------- QUESTION BANK ----------
 const questionBank = {
   math: {
     easy: [
@@ -106,15 +111,16 @@ let tabSwitches = 0;
 let gameMode = "cups";
 const PENALTY_AMOUNT = 0.5;
 
-// Cup game timers
+// Cup game
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
-let cupTimeLeft = 5;
+let cupGauge = 100;        // 0 to 100
+let cupGaugeDecrement = 2; // % per 0.1s
 
-// QTE game timer
+// QTE game
 let qteInterval = null;
-let gauge = 100;
+let qteGauge = 100;
 let targetKey = "A";
 
 // ---------- HELPER ----------
@@ -130,6 +136,24 @@ function addLog(message) {
   logArea.prepend(entry);
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
+
+// ---------- CLEANUP & RETURN TO HOME ----------
+function cleanupAndReturnHome() {
+  // Stop all intervals
+  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
+  if (cupTimerInterval) clearInterval(cupTimerInterval);
+  if (qteInterval) clearInterval(qteInterval);
+  
+  // Hide quiz, show home
+  getEl("quizApp").style.display = "none";
+  getEl("homeScreen").style.display = "flex";
+  
+  // Optionally reset any UI states
+  addLog("Returned to home screen.");
+}
+
+// Make globally accessible for HTML buttons
+window.returnToHome = cleanupAndReturnHome;
 
 // ---------- START QUIZ ----------
 function startQuizApp() {
@@ -166,7 +190,7 @@ function startQuizApp() {
   addLog(`Quiz started: ${subject} - ${difficulty} | Minigame: ${gameMode}`);
 }
 
-// ---------- EDITOR FUNCTIONS ----------
+// ---------- EDITOR FUNCTIONS (unchanged) ----------
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -184,10 +208,10 @@ function renderQuestionEditor() {
   const container = getEl("questionEditorList");
   container.innerHTML = "";
 
-  const questionsArray = questionBank[subject][difficulty];
-  if (!questionsArray) return;
+  const qs = questionBank[subject][difficulty];
+  if (!qs) return;
 
-  questionsArray.forEach((q, idx) => {
+  qs.forEach((q, idx) => {
     const div = document.createElement("div");
     div.className = "question-edit-card";
     div.innerHTML = `
@@ -200,42 +224,39 @@ function renderQuestionEditor() {
     `;
     container.appendChild(div);
   });
+  attachEditorEvents(subject, difficulty);
+}
 
+function attachEditorEvents(subject, difficulty) {
   document.querySelectorAll('[data-field]').forEach(inp => {
+    inp.removeEventListener('change', (e) => {});
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
-      updateQuestion(subject, difficulty, idx, 'question', inp.value);
+      questionBank[subject][difficulty][idx].question = inp.value;
+      addLog("Question updated.");
     });
   });
   document.querySelectorAll('[data-answer]').forEach(inp => {
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
       const ansIdx = parseInt(inp.dataset.answer);
-      updateAnswer(subject, difficulty, idx, ansIdx, inp.value);
+      questionBank[subject][difficulty][idx].answers[ansIdx] = inp.value;
+      addLog("Answer updated.");
     });
   });
   document.querySelectorAll('[data-correct]').forEach(inp => {
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
-      updateQuestion(subject, difficulty, idx, 'correct', parseInt(inp.value));
+      questionBank[subject][difficulty][idx].correct = parseInt(inp.value);
+      addLog("Correct answer updated.");
     });
   });
-}
-
-function updateQuestion(subject, difficulty, index, field, value) {
-  questionBank[subject][difficulty][index][field] = value;
-  addLog("Question updated.");
-}
-
-function updateAnswer(subject, difficulty, index, answerIndex, value) {
-  questionBank[subject][difficulty][index].answers[answerIndex] = value;
-  addLog("Answer updated.");
 }
 
 function addNewQuestion() {
   const subject = getEl("editorSubjectSelect").value;
   const difficulty = getEl("editorDifficultySelect").value;
-  const questionText = getEl("newQuestionText").value;
+  const qText = getEl("newQuestionText").value;
   const answers = [
     getEl("answer1").value,
     getEl("answer2").value,
@@ -243,12 +264,12 @@ function addNewQuestion() {
     getEl("answer4").value
   ];
   const correct = parseInt(getEl("correctAnswer").value);
-  if (!questionText || answers.some(a => !a) || isNaN(correct)) {
+  if (!qText || answers.some(a => !a) || isNaN(correct)) {
     alert("Please fill all fields.");
     return;
   }
   questionBank[subject][difficulty].push({
-    question: questionText,
+    question: qText,
     answers: answers,
     correct: correct
   });
@@ -271,7 +292,7 @@ function escapeHtml(str) {
   });
 }
 
-// ---------- QUIZ FUNCTIONS ----------
+// ---------- QUIZ CORE ----------
 function loadQuestion() {
   if (currentQuestion >= questions.length) {
     endQuiz();
@@ -315,7 +336,6 @@ function applyPenalty(reason) {
 }
 
 function endQuiz() {
-  // Clear all intervals to prevent background timers
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
@@ -328,7 +348,7 @@ function endQuiz() {
   addLog("Quiz completed.");
 }
 
-// ---------- ANTI-CHEAT: BLOCK COPY/PASTE ----------
+// ---------- ANTI-CHEAT ----------
 ["copy", "paste", "cut"].forEach(event => {
   document.addEventListener(event, (e) => {
     e.preventDefault();
@@ -336,7 +356,6 @@ function endQuiz() {
   });
 });
 
-// ---------- TAB SWITCH DETECTION ----------
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     tabSwitches++;
@@ -348,16 +367,17 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ---------- CUP GAME WITH TIMER ----------
+// ---------- CUP GAME WITH GAUGE BAR ----------
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball";
-  getEl("gameDescription").textContent = "Click the correct cup before the timer runs out. Correct clicks reset the timer.";
+  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
+  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills the gauge.";
   
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
-    <div class="cup-timer" style="margin-top: 20px; font-size: 24px; font-weight: bold; text-align: center;">
-      Time left: <span id="cupTimeLeft">5.0</span>s
+    <div class="gauge-box" style="margin-top: 20px;">
+      <div class="gauge-fill" id="cupGaugeFill" style="width:100%; height:25px;"></div>
     </div>
+    <div style="text-align:center; margin-top:8px;">Pressure Gauge</div>
   `;
   
   const container = getEl("cupsContainer");
@@ -373,37 +393,43 @@ function startCupGame() {
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   cupShuffleInterval = setInterval(() => shuffleBall(), 5000);
   
+  cupGauge = 100;
+  const fillEl = getEl("cupGaugeFill");
+  if (fillEl) fillEl.style.width = cupGauge + "%";
+  
   if (cupTimerInterval) clearInterval(cupTimerInterval);
-  cupTimeLeft = 5;
-  updateCupTimerDisplay();
   cupTimerInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    cupTimeLeft -= 0.1;
-    if (cupTimeLeft <= 0) {
-      applyPenalty("Cup timer expired");
+    cupGauge -= cupGaugeDecrement;
+    if (cupGauge < 0) cupGauge = 0;
+    const fill = getEl("cupGaugeFill");
+    if (fill) fill.style.width = cupGauge + "%";
+    
+    if (cupGauge <= 0) {
+      // Gauge empty: penalty, reset gauge, shuffle ball to random cup
+      applyPenalty("Cup gauge emptied (no correct click in time)");
+      cupGauge = 100;
+      if (fill) fill.style.width = "100%";
       shuffleBall();
-      cupTimeLeft = 5;
-      addLog("Cup timer expired – ball moved, penalty applied.");
+      addLog("Cup gauge reset due to timeout.");
     }
-    updateCupTimerDisplay();
-  }, 100);
-}
-
-function updateCupTimerDisplay() {
-  const timerSpan = getEl("cupTimeLeft");
-  if (timerSpan) timerSpan.textContent = cupTimeLeft.toFixed(1);
+  }, 100); // update every 0.1s
 }
 
 function handleCupClick(index) {
   if (index === cupBallIndex) {
-    cupTimeLeft = 5;
-    updateCupTimerDisplay();
-    addLog("Correct cup clicked – timer reset.");
+    // Correct: refill gauge, shuffle ball
+    cupGauge = 100;
+    const fill = getEl("cupGaugeFill");
+    if (fill) fill.style.width = "100%";
+    addLog("Correct cup clicked – gauge refilled.");
     shuffleBall();
   } else {
+    // Wrong cup: penalty, reset gauge, shuffle ball
     applyPenalty("Wrong cup selected");
-    cupTimeLeft = 5;
-    updateCupTimerDisplay();
+    cupGauge = 100;
+    const fill = getEl("cupGaugeFill");
+    if (fill) fill.style.width = "100%";
     shuffleBall();
   }
 }
@@ -418,33 +444,35 @@ function shuffleBall() {
   addLog(`Ball moved to cup ${cupBallIndex + 1}`);
 }
 
-// ---------- QTE GAME ----------
+// ---------- QTE GAME (unchanged but cleaned) ----------
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
-  getEl("gameDescription").textContent = "Press the correct key continuously to keep the gauge alive.";
+  getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
   
   getEl("gameArea").innerHTML = `
     <div class="qte-container">
-      <div class="target-key" id="targetKey"></div>
-      <div class="gauge-box"><div class="gauge-fill" id="gaugeFill"></div></div>
+      <div class="target-key" id="targetKey">A</div>
+      <div class="gauge-box"><div class="gauge-fill" id="qteGaugeFill"></div></div>
     </div>
   `;
   
   targetKey = randomLetter();
   getEl("targetKey").textContent = targetKey;
-  gauge = 100;
-  const fill = getEl("gaugeFill");
-  if (fill) fill.style.width = gauge + "%";
+  qteGauge = 100;
+  const fill = getEl("qteGaugeFill");
+  if (fill) fill.style.width = "100%";
   
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    gauge -= 1;
-    const fillEl = getEl("gaugeFill");
-    if (fillEl) fillEl.style.width = gauge + "%";
-    if (gauge <= 0) {
-      gauge = 100;
-      applyPenalty("Gauge emptied");
+    qteGauge -= 2;
+    if (qteGauge < 0) qteGauge = 0;
+    const fillEl = getEl("qteGaugeFill");
+    if (fillEl) fillEl.style.width = qteGauge + "%";
+    if (qteGauge <= 0) {
+      applyPenalty("QTE gauge emptied");
+      qteGauge = 100;
+      if (fillEl) fillEl.style.width = "100%";
       targetKey = randomLetter();
       const targetEl = getEl("targetKey");
       if (targetEl) targetEl.textContent = targetKey;
@@ -453,21 +481,19 @@ function startQTEGame() {
 }
 
 function randomLetter() {
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  return letters[Math.floor(Math.random() * letters.length)];
+  return String.fromCharCode(65 + Math.floor(Math.random() * 26));
 }
 
 document.addEventListener("keydown", (e) => {
   if (getEl("quizApp").style.display !== "flex") return;
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
-    gauge += 12;
-    if (gauge > 100) gauge = 100;
-    const fillEl = getEl("gaugeFill");
-    if (fillEl) fillEl.style.width = gauge + "%";
+    qteGauge = Math.min(100, qteGauge + 20);
+    const fillEl = getEl("qteGaugeFill");
+    if (fillEl) fillEl.style.width = qteGauge + "%";
     targetKey = randomLetter();
     const targetEl = getEl("targetKey");
     if (targetEl) targetEl.textContent = targetKey;
-    addLog(`Correct key pressed: ${e.key.toUpperCase()}`);
+    addLog(`Correct key: ${e.key.toUpperCase()}`);
   }
 });
