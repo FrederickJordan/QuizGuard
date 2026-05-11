@@ -1,74 +1,152 @@
+<!-- ========================= -->
+<!-- REPLACE YOUR ENTIRE index.html WITH THIS -->
+<!-- ========================= -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0"/>
+
   <title>QuizGuard</title>
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet"
+        href="style.css">
 </head>
 
 <body>
 
-<!-- HOME SCREEN -->
+<!-- ===================================== -->
+<!-- HOME PAGE -->
+<!-- ===================================== -->
 
-<div id="homeScreen" class="home-screen">
+<div id="homeScreen"
+     class="home-screen">
+
+  <div class="bg-circle circle1"></div>
+  <div class="bg-circle circle2"></div>
 
   <div class="home-card">
 
-    <h1 class="home-title">QuizGuard</h1>
+    <div class="logo-badge">
+      QG
+    </div>
+
+    <h1 class="home-title">
+      QuizGuard
+    </h1>
 
     <p class="home-subtitle">
       Gamified Anti-Cheating Quiz Platform
     </p>
 
-    <div class="menu-section">
+    <div class="feature-grid">
 
-      <label>Choose Subject</label>
+      <div class="feature-box">
+        <h3>🎮 Active Minigames</h3>
+        <p>
+          Continuous interaction required while answering questions.
+        </p>
+      </div>
 
-      <select id="subjectSelect" class="menu-select">
-        <option value="math">Math</option>
-        <option value="english">English</option>
-        <option value="computer_science">Computer Science</option>
-        <option value="science">Science</option>
-      </select>
+      <div class="feature-box">
+        <h3>🛡 Anti-Cheat</h3>
+        <p>
+          Tab switch detection, penalties, and interaction monitoring.
+        </p>
+      </div>
+
+      <div class="feature-box">
+        <h3>📚 Question Bank</h3>
+        <p>
+          Add, edit, and manage quiz questions by subject.
+        </p>
+      </div>
+
+      <div class="feature-box">
+        <h3>⚡ Real-Time Pressure</h3>
+        <p>
+          Students must multitask continuously to avoid penalties.
+        </p>
+      </div>
 
     </div>
 
-    <div class="menu-section">
+    <div class="selection-grid">
 
-      <label>Select Difficulty</label>
+      <div class="menu-section">
 
-      <select id="difficultySelect" class="menu-select">
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
-      </select>
+        <label>Choose Subject</label>
 
-    </div>
+        <select id="subjectSelect"
+                class="menu-select">
 
-    <div class="menu-section">
+          <option value="math">Math</option>
+          <option value="english">English</option>
+          <option value="computer_science">
+            Computer Science
+          </option>
+          <option value="science">Science</option>
 
-      <label>Select Minigame</label>
+        </select>
 
-      <select id="minigameSelect" class="menu-select">
-        <option value="random">Random</option>
-        <option value="cups">Find The Ball</option>
-        <option value="qte">QTE Pressure Gauge</option>
-      </select>
+      </div>
+
+      <div class="menu-section">
+
+        <label>Select Difficulty</label>
+
+        <select id="difficultySelect"
+                class="menu-select">
+
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+
+        </select>
+
+      </div>
+
+      <div class="menu-section">
+
+        <label>Select Minigame</label>
+
+        <select id="minigameSelect"
+                class="menu-select">
+
+          <option value="random">
+            Random
+          </option>
+
+          <option value="cups">
+            Find The Ball
+          </option>
+
+          <option value="qte">
+            QTE Pressure Gauge
+          </option>
+
+        </select>
+
+      </div>
 
     </div>
 
     <div class="home-buttons">
 
-      <button class="home-btn primary-btn"
+      <button class="home-btn start-btn"
               onclick="startQuizApp()">
-        Start Quiz
+
+        ▶ Start Quiz
+
       </button>
 
-      <button class="home-btn secondary-btn"
+      <button class="home-btn editor-btn"
               onclick="openQuestionEditor()">
-        Edit Questions
+
+        ✏ Edit Questions
+
       </button>
 
     </div>
@@ -77,7 +155,9 @@
 
 </div>
 
+<!-- ===================================== -->
 <!-- QUESTION EDITOR -->
+<!-- ===================================== -->
 
 <div id="editorScreen"
      class="editor-screen"
@@ -91,7 +171,9 @@
 
       <button class="back-btn"
               onclick="closeQuestionEditor()">
-        Back
+
+        ← Back
+
       </button>
 
     </div>
@@ -103,14 +185,18 @@
 
         <option value="math">Math</option>
         <option value="english">English</option>
-        <option value="computer_science">Computer Science</option>
+        <option value="computer_science">
+          Computer Science
+        </option>
         <option value="science">Science</option>
 
       </select>
 
-      <button class="home-btn primary-btn"
+      <button class="home-btn start-btn"
               onclick="renderQuestionEditor()">
+
         Load Questions
+
       </button>
 
     </div>
@@ -145,9 +231,11 @@
              id="correctAnswer"
              placeholder="Correct Answer Index (0-3)">
 
-      <button class="home-btn primary-btn"
+      <button class="home-btn start-btn"
               onclick="addNewQuestion()">
+
         Add Question
+
       </button>
 
     </div>
@@ -156,7 +244,9 @@
 
 </div>
 
+<!-- ===================================== -->
 <!-- WARNING -->
+<!-- ===================================== -->
 
 <div class="flash-warning"
      id="tabWarning">
@@ -166,7 +256,9 @@
 
 </div>
 
-<!-- QUIZ APP -->
+<!-- ===================================== -->
+<!-- QUIZ APPLICATION -->
+<!-- ===================================== -->
 
 <div class="app"
      id="quizApp"
@@ -210,7 +302,20 @@
            id="answersContainer">
       </div>
 
+      <div class="anti-cheat-box">
+
+        <strong>QuizGuard Anti-Cheat:</strong><br>
+
+        Minigames are always active while
+        answering questions. Ignoring the
+        minigame or switching tabs causes
+        penalties.
+
+      </div>
+
     </div>
+
+    <!-- RESULTS -->
 
     <div class="results-screen"
          id="resultsScreen">
@@ -226,7 +331,7 @@
         </div>
 
         <div class="result-item">
-          Failures:
+          Minigame Failures:
           <span class="highlight"
                 id="finalFailures"></span>
         </div>
