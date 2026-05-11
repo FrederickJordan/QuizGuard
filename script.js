@@ -1,3 +1,104 @@
+// ========== FIREBASE PART ==========
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+
+// Your Firebase config – replace with your own
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// DOM elements
+let loginEmail, loginPassword, loginBtn, registerBtn, authMessage, authScreen, appContainer;
+
+// Wait for DOM to load
+document.addEventListener('DOMContentLoaded', () => {
+  loginEmail = document.getElementById('loginEmail');
+  loginPassword = document.getElementById('loginPassword');
+  loginBtn = document.getElementById('loginBtn');
+  registerBtn = document.getElementById('registerBtn');
+  authMessage = document.getElementById('authMessage');
+  authScreen = document.getElementById('authScreen');
+  appContainer = document.getElementById('appContainer');
+
+  if (!loginBtn || !registerBtn) {
+    console.error("Login/register buttons not found!");
+    return;
+  }
+
+  loginBtn.addEventListener('click', async () => {
+    const email = loginEmail.value;
+    const password = loginPassword.value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      authMessage.innerText = "";
+    } catch (error) {
+      console.error("Login error:", error);
+      authMessage.innerText = error.message;
+    }
+  });
+
+  registerBtn.addEventListener('click', async () => {
+    const email = loginEmail.value;
+    const password = loginPassword.value;
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      authMessage.innerText = "";
+    } catch (error) {
+      console.error("Register error:", error);
+      authMessage.innerText = error.message;
+    }
+  });
+});
+
+// Auth state changed
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    console.log("User logged in:", user.email);
+    if (authScreen) authScreen.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
+    // Load question bank from Firestore (optional)
+    await loadUserQuestionBank(user.uid);
+  } else {
+    console.log("User logged out");
+    if (authScreen) authScreen.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
+  }
+});
+
+async function loadUserQuestionBank(uid) {
+  const userDocRef = doc(db, "users", uid);
+  const docSnap = await getDoc(userDocRef);
+  if (docSnap.exists() && docSnap.data().questionBank) {
+    window.questionBank = docSnap.data().questionBank;
+    console.log("Loaded from cloud");
+  } else {
+    // set default bank
+    window.questionBank = getDefaultQuestionBank(); // your huge bank
+    await setDoc(userDocRef, { questionBank: window.questionBank });
+  }
+}
+
+async function saveQuestionBankToCloud() {
+  if (auth.currentUser) {
+    const userDocRef = doc(db, "users", auth.currentUser.uid);
+    await setDoc(userDocRef, { questionBank: window.questionBank }, { merge: true });
+  }
+}
+
+// Call saveQuestionBankToCloud() after every questionBank modification.
+// ... rest of your game code (cup game, QTE, etc.) using window.questionBank
+
 /* ==========================================
    QuizGuard – Cup game: ball moves only on reset
    10 questions per difficulty, score 100, gauge warnings
