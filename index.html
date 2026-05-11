@@ -1,5 +1,5 @@
 <!-- ========================= -->
-<!-- REPLACE YOUR ENTIRE index.html WITH THIS -->
+<!-- FULL index.html WITH DIFFICULTY SELECTOR IN EDITOR -->
 <!-- ========================= -->
 
 <!DOCTYPE html>
@@ -60,7 +60,7 @@
       <div class="feature-box">
         <h3>📚 Question Bank</h3>
         <p>
-          Add, edit, and manage quiz questions by subject.
+          Add, edit, and manage quiz questions by subject and difficulty.
         </p>
       </div>
 
@@ -192,11 +192,15 @@
 
       </select>
 
-      <select id="editorDifficultySelect" class="menu-select">
-  <option value="easy">Easy</option>
-  <option value="medium">Medium</option>
-  <option value="hard">Hard</option>
-</select>
+      <!-- NEW: difficulty selector for editor -->
+      <select id="editorDifficultySelect"
+              class="menu-select">
+
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+
+      </select>
 
       <button class="home-btn start-btn"
               onclick="renderQuestionEditor()">
