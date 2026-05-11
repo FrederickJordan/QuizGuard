@@ -339,7 +339,7 @@ function endQuiz() {
 
 // ---------- CUP GAME (ball moves only on reset) ----------
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
+  getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge and moves the ball.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
