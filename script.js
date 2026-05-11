@@ -1,15 +1,16 @@
 /* ==========================================
    QuizGuard – Final Version
-   – Score out of 100 (points per correct = 100 / total questions)
+   – 10 questions per difficulty per subject (120 total)
+   – Score out of 100 (points per correct = 100 / questions.length)
    – Penalty = -5 points (minimum 0)
    – QTE slower drain (‑1 per 100ms) & +35 on correct key
    – Cup game gauge refills on correct click
    – Tab switch penalty applied
    ========================================== */
 
-// ---------- QUESTION BANK (5 per difficulty, 4 subjects) ----------
+// ---------- EXPANDED QUESTION BANK (10 per difficulty) ----------
 const questionBank = {
- math: {
+  math: {
     easy: [
       { question: "What is 12 × 8?", answers: ["96", "88", "108", "84"], correct: 0 },
       { question: "What is 15 + 27?", answers: ["42", "32", "52", "41"], correct: 0 },
@@ -171,7 +172,7 @@ let penalties = 0;        // count of penalties applied (for display)
 let failures = 0;         // count of minigame failures (for display)
 let tabSwitches = 0;      // number of times tab was hidden
 let gameMode = "cups";
-let pointsPerCorrect = 10;  // dynamically calculated = 100 / number of questions
+let pointsPerCorrect = 20;  // dynamically calculated = 100 / number of questions
 
 // Cup game
 let cupShuffleInterval = null;
@@ -268,7 +269,7 @@ function startQuizApp() {
   
   // Each correct answer gives equal share of 100 points
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
@@ -284,7 +285,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | Max score 100 | Points per correct: ${pointsPerCorrect.toFixed(1)}`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions | Max score 100 | Points per correct: ${pointsPerCorrect.toFixed(1)}`);
 }
 
 function loadQuestion() {
