@@ -50,38 +50,23 @@ let gameMode = "cups";
 
 const PENALTY_AMOUNT = 0.5;
 
-/* DOM */
+/* ================================= */
+/* HELPER */
+/* ================================= */
 
-const questionText =
-  document.getElementById("questionText");
+function getEl(id) {
+  return document.getElementById(id);
+}
 
-const questionNumber =
-  document.getElementById("questionNumber");
-
-const answersContainer =
-  document.getElementById("answersContainer");
-
-const scoreEl =
-  document.getElementById("score");
-
-const penaltiesEl =
-  document.getElementById("penalties");
-
-const tabSwitchEl =
-  document.getElementById("tabSwitches");
-
-const gameArea =
-  document.getElementById("gameArea");
-
-const logArea =
-  document.getElementById("logArea");
-
-const tabWarning =
-  document.getElementById("tabWarning");
-
-/* LOG */
+/* ================================= */
+/* LOG SYSTEM */
+/* ================================= */
 
 function addLog(message) {
+
+  const logArea = getEl("logArea");
+
+  if (!logArea) return;
 
   const time =
     new Date().toLocaleTimeString();
@@ -99,17 +84,25 @@ function addLog(message) {
   }
 }
 
-/* HOME */
+/* ================================= */
+/* HOME SCREEN */
+/* ================================= */
 
 function startQuizApp() {
 
   const subject =
-    document.getElementById("subjectSelect").value;
+    getEl("subjectSelect").value;
 
   const selectedMinigame =
-    document.getElementById("minigameSelect").value;
+    getEl("minigameSelect").value;
 
   questions = questionBank[subject];
+
+  currentQuestion = 0;
+  score = 0;
+  penalties = 0;
+  failures = 0;
+  tabSwitches = 0;
 
   if (selectedMinigame === "random") {
 
@@ -121,11 +114,9 @@ function startQuizApp() {
     gameMode = selectedMinigame;
   }
 
-  document.getElementById("homeScreen")
-    .style.display = "none";
+  getEl("homeScreen").style.display = "none";
 
-  document.getElementById("quizApp")
-    .style.display = "flex";
+  getEl("quizApp").style.display = "flex";
 
   updateStats();
 
@@ -142,33 +133,31 @@ function startQuizApp() {
 
 function openQuestionEditor() {
 
-  document.getElementById("homeScreen")
-    .style.display = "none";
+  getEl("homeScreen").style.display = "none";
 
-  document.getElementById("editorScreen")
-    .style.display = "block";
+  getEl("editorScreen").style.display = "block";
 
   renderQuestionEditor();
 }
 
 function closeQuestionEditor() {
 
-  document.getElementById("editorScreen")
-    .style.display = "none";
+  getEl("editorScreen").style.display = "none";
 
-  document.getElementById("homeScreen")
-    .style.display = "flex";
+  getEl("homeScreen").style.display = "flex";
 }
 
+/* ================================= */
 /* QUESTION EDITOR */
+/* ================================= */
 
 function renderQuestionEditor() {
 
   const subject =
-    document.getElementById("editorSubjectSelect").value;
+    getEl("editorSubjectSelect").value;
 
   const container =
-    document.getElementById("questionEditorList");
+    getEl("questionEditorList");
 
   container.innerHTML = "";
 
@@ -202,6 +191,12 @@ function renderQuestionEditor() {
              value="${q.answers[3]}"
              onchange="updateAnswer('${subject}', ${index}, 3, this.value)">
 
+      <input type="number"
+             value="${q.correct}"
+             min="0"
+             max="3"
+             onchange="updateQuestion('${subject}', ${index}, 'correct', parseInt(this.value))">
+
     `;
 
     container.appendChild(div);
@@ -227,22 +222,22 @@ function updateAnswer(subject, index, answerIndex, value) {
 function addNewQuestion() {
 
   const subject =
-    document.getElementById("editorSubjectSelect").value;
+    getEl("editorSubjectSelect").value;
 
   const question =
-    document.getElementById("newQuestionText").value;
+    getEl("newQuestionText").value;
 
   const answers = [
 
-    document.getElementById("answer1").value,
-    document.getElementById("answer2").value,
-    document.getElementById("answer3").value,
-    document.getElementById("answer4").value
+    getEl("answer1").value,
+    getEl("answer2").value,
+    getEl("answer3").value,
+    getEl("answer4").value
 
   ];
 
   const correct =
-    parseInt(document.getElementById("correctAnswer").value);
+    parseInt(getEl("correctAnswer").value);
 
   questionBank[subject].push({
     question,
@@ -253,9 +248,18 @@ function addNewQuestion() {
   renderQuestionEditor();
 
   addLog("New question added.");
+
+  getEl("newQuestionText").value = "";
+  getEl("answer1").value = "";
+  getEl("answer2").value = "";
+  getEl("answer3").value = "";
+  getEl("answer4").value = "";
+  getEl("correctAnswer").value = "";
 }
 
-/* QUIZ */
+/* ================================= */
+/* QUIZ SYSTEM */
+/* ================================= */
 
 function loadQuestion() {
 
@@ -269,13 +273,13 @@ function loadQuestion() {
   const q =
     questions[currentQuestion];
 
-  questionNumber.textContent =
+  getEl("questionNumber").textContent =
     `Question ${currentQuestion + 1} / ${questions.length}`;
 
-  questionText.textContent =
+  getEl("questionText").textContent =
     q.question;
 
-  answersContainer.innerHTML = "";
+  getEl("answersContainer").innerHTML = "";
 
   q.answers.forEach((answer, index) => {
 
@@ -294,11 +298,11 @@ function loadQuestion() {
 
         score += 2;
 
-        addLog("Correct answer.");
+        addLog("Correct answer selected.");
 
       } else {
 
-        addLog("Wrong answer.");
+        addLog("Wrong answer selected.");
       }
 
       updateStats();
@@ -308,19 +312,20 @@ function loadQuestion() {
       loadQuestion();
     });
 
-    answersContainer.appendChild(btn);
+    getEl("answersContainer")
+      .appendChild(btn);
   });
 }
 
 function updateStats() {
 
-  scoreEl.textContent =
+  getEl("score").textContent =
     Math.max(score - penalties, 0).toFixed(1);
 
-  penaltiesEl.textContent =
+  getEl("penalties").textContent =
     penalties.toFixed(1);
 
-  tabSwitchEl.textContent =
+  getEl("tabSwitches").textContent =
     tabSwitches;
 }
 
@@ -332,31 +337,34 @@ function applyPenalty(reason) {
 
   updateStats();
 
-  addLog(`Penalty: ${reason}`);
+  addLog(`Penalty applied: ${reason}`);
 }
 
 function endQuiz() {
 
-  document.getElementById("quizContent")
-    .style.display = "none";
+  getEl("quizContent").style.display =
+    "none";
 
-  document.getElementById("resultsScreen")
-    .style.display = "block";
+  getEl("resultsScreen").style.display =
+    "block";
 
-  document.getElementById("finalScore")
-    .textContent =
+  getEl("finalScore").textContent =
     Math.max(score - penalties, 0).toFixed(1);
 
-  document.getElementById("finalFailures")
-    .textContent = failures;
+  getEl("finalFailures").textContent =
+    failures;
 
-  document.getElementById("finalTabs")
-    .textContent = tabSwitches;
+  getEl("finalTabs").textContent =
+    tabSwitches;
+
+  addLog("Quiz completed.");
 }
 
-/* BLOCK COPY */
+/* ================================= */
+/* BLOCK COPY PASTE */
+/* ================================= */
 
-["copy","paste","cut"].forEach(eventName => {
+["copy", "paste", "cut"].forEach(eventName => {
 
   document.addEventListener(eventName, (e) => {
 
@@ -366,7 +374,9 @@ function endQuiz() {
   });
 });
 
-/* TAB SWITCH */
+/* ================================= */
+/* TAB SWITCH DETECTION */
+/* ================================= */
 
 document.addEventListener("visibilitychange", () => {
 
@@ -376,30 +386,33 @@ document.addEventListener("visibilitychange", () => {
 
     updateStats();
 
-    tabWarning.style.display = "flex";
+    getEl("tabWarning").style.display =
+      "flex";
 
     addLog("Tab switch detected.");
 
   } else {
 
-    tabWarning.style.display = "none";
+    getEl("tabWarning").style.display =
+      "none";
   }
 });
 
+/* ================================= */
 /* CUP GAME */
+/* ================================= */
 
 let cupBallIndex = 0;
 
 function startCupGame() {
 
-  document.getElementById("gameTitle")
-    .textContent = "Find The Ball";
+  getEl("gameTitle").textContent =
+    "Find The Ball";
 
-  document.getElementById("gameDescription")
-    .textContent =
-    "Track the ball continuously while answering.";
+  getEl("gameDescription").textContent =
+    "Track the correct cup continuously while answering questions.";
 
-  gameArea.innerHTML = `
+  getEl("gameArea").innerHTML = `
 
     <div>
 
@@ -412,7 +425,7 @@ function startCupGame() {
   `;
 
   const container =
-    document.getElementById("cupsContainer");
+    getEl("cupsContainer");
 
   for (let i = 0; i < 3; i++) {
 
@@ -428,6 +441,12 @@ function startCupGame() {
   }
 
   shuffleBall();
+
+  setInterval(() => {
+
+    shuffleBall();
+
+  }, 5000);
 }
 
 function shuffleBall() {
@@ -435,8 +454,8 @@ function shuffleBall() {
   const cups =
     document.querySelectorAll(".cup");
 
-  cups.forEach(c => {
-    c.innerHTML = "";
+  cups.forEach(cup => {
+    cup.innerHTML = "";
   });
 
   cupBallIndex =
@@ -459,28 +478,28 @@ function handleCupClick(index) {
 
   } else {
 
-    applyPenalty("Wrong cup");
+    applyPenalty("Wrong cup selected");
   }
 
   shuffleBall();
 }
 
+/* ================================= */
 /* QTE GAME */
+/* ================================= */
 
 let gauge = 100;
 let targetKey = "A";
 
 function startQTEGame() {
 
-  document.getElementById("gameTitle")
-    .textContent =
+  getEl("gameTitle").textContent =
     "QTE Pressure Gauge";
 
-  document.getElementById("gameDescription")
-    .textContent =
-    "Press the correct key continuously.";
+  getEl("gameDescription").textContent =
+    "Press the correct key continuously to keep the gauge alive.";
 
-  gameArea.innerHTML = `
+  getEl("gameArea").innerHTML = `
 
     <div class="qte-container">
 
@@ -497,25 +516,33 @@ function startQTEGame() {
       </div>
 
     </div>
+
   `;
 
   targetKey = randomLetter();
 
-  document.getElementById("targetKey")
-    .textContent = targetKey;
+  getEl("targetKey").textContent =
+    targetKey;
+
+  gauge = 100;
 
   setInterval(() => {
 
     gauge -= 1;
 
-    document.getElementById("gaugeFill")
-      .style.width = gauge + "%";
+    getEl("gaugeFill").style.width =
+      gauge + "%";
 
     if (gauge <= 0) {
 
       gauge = 100;
 
       applyPenalty("Gauge emptied");
+
+      targetKey = randomLetter();
+
+      getEl("targetKey").textContent =
+        targetKey;
     }
 
   }, 100);
@@ -537,7 +564,7 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key.toUpperCase() === targetKey) {
 
-    gauge += 10;
+    gauge += 12;
 
     if (gauge > 100) {
       gauge = 100;
@@ -545,7 +572,9 @@ document.addEventListener("keydown", (e) => {
 
     targetKey = randomLetter();
 
-    document.getElementById("targetKey")
-      .textContent = targetKey;
+    getEl("targetKey").textContent =
+      targetKey;
+
+    addLog(`Correct key pressed: ${e.key.toUpperCase()}`);
   }
 });
