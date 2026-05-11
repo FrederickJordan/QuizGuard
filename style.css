@@ -117,7 +117,7 @@ body {
   font-weight: bold;
 }
 
-/* Gauge warning popup (added at your request) */
+/* Gauge warning popup */
 .gauge-warning {
   position: fixed;
   top: 20px;
