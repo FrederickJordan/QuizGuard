@@ -1,8 +1,9 @@
 /* ==========================================
-   QuizGuard – Final Version with Gauge Warnings
+   QuizGuard – No Cup Animations, Simple Cup Game
+   10 questions per difficulty, score 100, gauge warnings
    ========================================== */
 
-// ---------- EXPANDED QUESTION BANK (10 per difficulty) ----------
+// ---------- QUESTION BANK (10 per difficulty) ----------
 const questionBank = {
   math: {
     easy: [
@@ -166,14 +167,14 @@ let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 10;
+let pointsPerCorrect = 20;
 
 // Cup game
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 1;
+const CUP_GAUGE_DECREMENT = 2;
 
 // QTE game
 let qteInterval = null;
@@ -182,7 +183,7 @@ let targetKey = "A";
 
 // Warning cooldown
 let lastWarningTime = 0;
-const WARNING_COOLDOWN_MS = 2000; // 2 seconds
+const WARNING_COOLDOWN_MS = 2000;
 
 // Helper
 function getEl(id) { return document.getElementById(id); }
@@ -192,7 +193,6 @@ function showGaugeWarning(message) {
   const now = Date.now();
   if (now - lastWarningTime < WARNING_COOLDOWN_MS) return;
   lastWarningTime = now;
-
   let warningDiv = document.getElementById('gaugeWarningPopup');
   if (!warningDiv) {
     warningDiv = document.createElement('div');
@@ -245,7 +245,7 @@ function cleanupAndReturnHome() {
 }
 window.returnToHome = cleanupAndReturnHome;
 
-// ---------- TAB SWITCH DETECTION ----------
+// ---------- TAB SWITCH DETECTION (penalty) ----------
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
@@ -285,7 +285,7 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
@@ -300,7 +300,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions | Max score 100`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions`);
 }
 
 function loadQuestion() {
@@ -345,14 +345,13 @@ function endQuiz() {
   addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
 }
 
-// ---------- CUP GAME ----------
+// ---------- SIMPLE CUP GAME (no animations) ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
     <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
-    <div style="text-align:center; margin-top:5px;">Pressure Gauge</div>
   `;
   const container = getEl("cupsContainer");
   for (let i=0; i<3; i++) {
@@ -374,12 +373,9 @@ function startCupGame() {
     if (cupGauge < 0) cupGauge = 0;
     const fillEl = getEl("cupGaugeFill");
     if (fillEl) fillEl.style.width = cupGauge + "%";
-
-    // Warning when gauge <= 20
     if (cupGauge <= 20 && cupGauge > 0) {
       showGaugeWarning("⚠️ Cup gauge low! Click correct cup!");
     }
-
     if (cupGauge <= 0) {
       applyPenalty("Cup gauge emptied (no correct click)");
       cupGauge = 100;
@@ -437,12 +433,9 @@ function startQTEGame() {
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
-
-    // Warning when gauge <= 20
     if (qteGauge <= 20 && qteGauge > 0) {
       showGaugeWarning("⚠️ QTE gauge low! Press correct key!");
     }
-
     if (qteGauge <= 0) {
       applyPenalty("QTE gauge emptied");
       qteGauge = 100;
