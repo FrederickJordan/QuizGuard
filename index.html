@@ -2,179 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QuizGuard – Gamified Anti‑Cheating Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuizGuard</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Import map for Firebase modules -->
-  <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"
-      }
-    }
-  </script>
-  <!-- Main script (type="module") -->
-  <script type="module" src="script.js"></script>
 </head>
 <body>
 
-<!-- ================================ -->
-<!-- LOGIN / REGISTER SCREEN          -->
-<!-- ================================ -->
-<div id="authScreen" class="home-screen">
+<!-- HOME SCREEN -->
+<div id="homeScreen" class="home-screen">
   <div class="bg-circle circle1"></div>
   <div class="bg-circle circle2"></div>
-  <div class="home-card" style="max-width: 450px;">
+  <div class="home-card">
     <div class="logo-badge">QG</div>
     <h1 class="home-title">QuizGuard</h1>
-    <p class="home-subtitle">Login or Register to continue</p>
+    <p class="home-subtitle">Gamified Anti‑Cheating Quiz Platform</p>
+    <div class="feature-grid">
+      <div class="feature-box"><h3>🎮 Active Minigames</h3><p>Continuous interaction required while answering questions.</p></div>
+      <div class="feature-box"><h3>🛡 Anti‑Cheat</h3><p>Tab switch detection, penalties, and interaction monitoring.</p></div>
+      <div class="feature-box"><h3>📚 Question Bank</h3><p>Add, edit, and manage quiz questions by subject and difficulty.</p></div>
+      <div class="feature-box"><h3>⚡ Real‑Time Pressure</h3><p>Students must multitask continuously to avoid penalties.</p></div>
+    </div>
     <div class="selection-grid">
       <div class="menu-section">
-        <label>Email</label>
-        <input type="email" id="loginEmail" class="menu-select" placeholder="your@email.com">
-      </div>
-      <div class="menu-section">
-        <label>Password</label>
-        <input type="password" id="loginPassword" class="menu-select" placeholder="password">
-      </div>
-    </div>
-    <div class="home-buttons">
-      <button class="home-btn start-btn" id="loginBtn">Login</button>
-      <button class="home-btn editor-btn" id="registerBtn">Register</button>
-    </div>
-    <div id="authMessage" style="margin-top: 15px; color: #e74c3c; text-align: center;"></div>
-  </div>
-</div>
-
-<!-- ================================ -->
-<!-- MAIN APP (hidden until login)    -->
-<!-- ================================ -->
-<div id="appContainer" style="display: none;">
-
-  <!-- HOME SCREEN (quiz setup) -->
-  <div id="homeScreen" class="home-screen">
-    <div class="bg-circle circle1"></div>
-    <div class="bg-circle circle2"></div>
-    <div class="home-card">
-      <div class="logo-badge">QG</div>
-      <h1 class="home-title">QuizGuard</h1>
-      <p class="home-subtitle">Gamified Anti‑Cheating Quiz Platform</p>
-      <div class="feature-grid">
-        <div class="feature-box"><h3>🎮 Active Minigames</h3><p>Continuous interaction required while answering questions.</p></div>
-        <div class="feature-box"><h3>🛡 Anti‑Cheat</h3><p>Tab switch detection, penalties, and interaction monitoring.</p></div>
-        <div class="feature-box"><h3>📚 Question Bank</h3><p>Add, edit, and manage quiz questions by subject and difficulty.</p></div>
-        <div class="feature-box"><h3>⚡ Real‑Time Pressure</h3><p>Students must multitask continuously to avoid penalties.</p></div>
-      </div>
-      <div class="selection-grid">
-        <div class="menu-section">
-          <label>Choose Subject</label>
-          <select id="subjectSelect" class="menu-select">
-            <option value="math">Math</option>
-            <option value="english">English</option>
-            <option value="computer_science">Computer Science</option>
-            <option value="science">Science</option>
-          </select>
-        </div>
-        <div class="menu-section">
-          <label>Select Difficulty</label>
-          <select id="difficultySelect" class="menu-select">
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-        <div class="menu-section">
-          <label>Select Minigame</label>
-          <select id="minigameSelect" class="menu-select">
-            <option value="random">Random</option>
-            <option value="cups">Find The Ball</option>
-            <option value="qte">QTE Pressure Gauge</option>
-          </select>
-        </div>
-      </div>
-      <div class="home-buttons">
-        <button class="home-btn start-btn" id="startQuizBtn">▶ Start Quiz</button>
-        <button class="home-btn editor-btn" id="openEditorBtn">✏ Edit Questions</button>
-        <button class="home-btn editor-btn" id="logoutBtn" style="background:#ef4444; color:white;">🚪 Logout</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- QUESTION EDITOR SCREEN -->
-  <div id="editorScreen" class="editor-screen" style="display:none;">
-    <div class="editor-container">
-      <div class="editor-top">
-        <h1>Question Bank Editor</h1>
-        <button class="back-btn" id="closeEditorBtn">← Back</button>
-      </div>
-      <div class="editor-controls">
-        <select id="editorSubjectSelect" class="menu-select">
+        <label>Choose Subject</label>
+        <select id="subjectSelect" class="menu-select">
           <option value="math">Math</option>
           <option value="english">English</option>
           <option value="computer_science">Computer Science</option>
           <option value="science">Science</option>
         </select>
-        <select id="editorDifficultySelect" class="menu-select">
+      </div>
+      <div class="menu-section">
+        <label>Select Difficulty</label>
+        <select id="difficultySelect" class="menu-select">
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
         </select>
-        <button class="home-btn start-btn" id="loadQuestionsBtn">Load Questions</button>
       </div>
-      <div id="questionEditorList"></div>
-      <div class="add-question-box">
-        <h2>Add New Question</h2>
-        <input type="text" id="newQuestionText" placeholder="Question">
-        <input type="text" id="answer1" placeholder="Answer 1">
-        <input type="text" id="answer2" placeholder="Answer 2">
-        <input type="text" id="answer3" placeholder="Answer 3">
-        <input type="text" id="answer4" placeholder="Answer 4">
-        <input type="number" id="correctAnswer" placeholder="Correct Answer Index (0-3)">
-        <button class="home-btn start-btn" id="addQuestionBtn">Add Question</button>
+      <div class="menu-section">
+        <label>Select Minigame</label>
+        <select id="minigameSelect" class="menu-select">
+          <option value="random">Random</option>
+          <option value="cups">Find The Ball</option>
+          <option value="qte">QTE Pressure Gauge</option>
+        </select>
       </div>
     </div>
-  </div>
-
-  <!-- QUIZ APPLICATION (active quiz) -->
-  <div class="app" id="quizApp" style="display:none;">
-    <div class="panel quiz-panel">
-      <div class="top-bar">
-        <div class="badge">Score: <span id="score">0</span></div>
-        <div class="badge">Penalties: <span id="penalties">0</span></div>
-        <div class="badge warning">Tab Switches: <span id="tabSwitches">0</span></div>
-      </div>
-      <div class="question-box" id="quizContent">
-        <div class="question-number" id="questionNumber"></div>
-        <div class="question" id="questionText"></div>
-        <div class="answers" id="answersContainer"></div>
-        <div class="anti-cheat-box">
-          <strong>QuizGuard Anti-Cheat:</strong><br>
-          Minigames are always active while answering questions. Ignoring the minigame or switching tabs causes penalties.
-        </div>
-      </div>
-      <div class="results-screen" id="resultsScreen">
-        <h1>Quiz Complete</h1>
-        <div class="results-box">
-          <div class="result-item">Final Score: <span class="highlight" id="finalScore"></span></div>
-          <div class="result-item">Minigame Failures: <span class="highlight" id="finalFailures"></span></div>
-          <div class="result-item">Tab Switches: <span class="highlight" id="finalTabs"></span></div>
-          <button class="home-btn start-btn" id="backToHomeBtn">Back to Home</button>
-        </div>
-      </div>
-    </div>
-    <div class="panel game-panel">
-      <div class="game-title" id="gameTitle">Active Minigame</div>
-      <div class="game-description" id="gameDescription"></div>
-      <div class="game-area" id="gameArea"></div>
-      <div class="log-area" id="logArea"></div>
+    <div class="home-buttons">
+      <button class="home-btn start-btn" onclick="startQuizApp()">▶ Start Quiz</button>
+      <button class="home-btn editor-btn" onclick="openQuestionEditor()">✏ Edit Questions</button>
     </div>
   </div>
 </div>
 
-<!-- TAB WARNING OVERLAY -->
+<!-- QUESTION EDITOR SCREEN -->
+<div id="editorScreen" class="editor-screen" style="display:none;">
+  <div class="editor-container">
+    <div class="editor-top">
+      <h1>Question Bank Editor</h1>
+      <button class="back-btn" onclick="closeQuestionEditor()">← Back</button>
+    </div>
+    <div class="editor-controls">
+      <select id="editorSubjectSelect" class="menu-select">
+        <option value="math">Math</option>
+        <option value="english">English</option>
+        <option value="computer_science">Computer Science</option>
+        <option value="science">Science</option>
+      </select>
+      <select id="editorDifficultySelect" class="menu-select">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <button class="home-btn start-btn" onclick="renderQuestionEditor()">Load Questions</button>
+    </div>
+    <div id="questionEditorList"></div>
+    <div class="add-question-box">
+      <h2>Add New Question</h2>
+      <input type="text" id="newQuestionText" placeholder="Question">
+      <input type="text" id="answer1" placeholder="Answer 1">
+      <input type="text" id="answer2" placeholder="Answer 2">
+      <input type="text" id="answer3" placeholder="Answer 3">
+      <input type="text" id="answer4" placeholder="Answer 4">
+      <input type="number" id="correctAnswer" placeholder="Correct Answer Index (0-3)">
+      <button class="home-btn start-btn" onclick="addNewQuestion()">Add Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- WARNING OVERLAY -->
 <div class="flash-warning" id="tabWarning">⚠ TAB SWITCH DETECTED ⚠<br><br>Return to the quiz immediately!</div>
 
+<!-- QUIZ APPLICATION -->
+<div class="app" id="quizApp" style="display:none;">
+  <div class="panel quiz-panel">
+    <div class="top-bar">
+      <div class="badge">Score: <span id="score">0</span></div>
+      <div class="badge">Penalties: <span id="penalties">0</span></div>
+      <div class="badge warning">Tab Switches: <span id="tabSwitches">0</span></div>
+    </div>
+    <div class="question-box" id="quizContent">
+      <div class="question-number" id="questionNumber"></div>
+      <div class="question" id="questionText"></div>
+      <div class="answers" id="answersContainer"></div>
+      <div class="anti-cheat-box">
+        <strong>QuizGuard Anti-Cheat:</strong><br>
+        Minigames are always active while answering questions. Ignoring the minigame or switching tabs causes penalties.
+      </div>
+    </div>
+    <div class="results-screen" id="resultsScreen">
+      <h1>Quiz Complete</h1>
+      <div class="results-box">
+        <div class="result-item">Final Score: <span class="highlight" id="finalScore"></span></div>
+        <div class="result-item">Minigame Failures: <span class="highlight" id="finalFailures"></span></div>
+        <div class="result-item">Tab Switches: <span class="highlight" id="finalTabs"></span></div>
+        <button class="home-btn start-btn" onclick="returnToHome()" style="margin-top:20px;">Back to Home</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel game-panel">
+    <div class="game-title" id="gameTitle">Active Minigame</div>
+    <div class="game-description" id="gameDescription"></div>
+    <div class="game-area" id="gameArea"></div>
+    <div class="log-area" id="logArea"></div>
+  </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
