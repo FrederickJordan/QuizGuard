@@ -344,7 +344,7 @@ function startQTEGame() {
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    qteGauge -= 0.2;
+    qteGauge -= 0.5;
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
