@@ -1,5 +1,5 @@
 /* ==========================================
-   QuizGuard – No Cup Animations, Simple Cup Game
+   QuizGuard – Cup game: ball moves only on reset
    10 questions per difficulty, score 100, gauge warnings
    ========================================== */
 
@@ -167,14 +167,13 @@ let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 20;
+let pointsPerCorrect = 10;
 
-// Cup game
-let cupShuffleInterval = null;
+// Cup game (no periodic shuffle)
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 2;
+const CUP_GAUGE_DECREMENT = 1;
 
 // QTE game
 let qteInterval = null;
@@ -185,7 +184,6 @@ let targetKey = "A";
 let lastWarningTime = 0;
 const WARNING_COOLDOWN_MS = 2000;
 
-// Helper
 function getEl(id) { return document.getElementById(id); }
 
 // ---------- GAUGE WARNING POPUP ----------
@@ -207,7 +205,6 @@ function showGaugeWarning(message) {
   }, 1000);
 }
 
-// ---------- LOGGING ----------
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -218,7 +215,6 @@ function addLog(message) {
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
 
-// ---------- PENALTY ----------
 function applyPenalty(reason) {
   penalties++;
   failures++;
@@ -227,16 +223,13 @@ function applyPenalty(reason) {
   addLog(`Penalty applied: ${reason} -5 points (now ${Math.floor(score)})`);
 }
 
-// ---------- UPDATE UI ----------
 function updateStats() {
   getEl("score").textContent = Math.floor(score);
   getEl("penalties").textContent = penalties;
   getEl("tabSwitches").textContent = tabSwitches;
 }
 
-// ---------- CLEANUP & RETURN HOME ----------
 function cleanupAndReturnHome() {
-  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizApp").style.display = "none";
@@ -245,7 +238,7 @@ function cleanupAndReturnHome() {
 }
 window.returnToHome = cleanupAndReturnHome;
 
-// ---------- TAB SWITCH DETECTION (penalty) ----------
+// Tab switch detection
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
@@ -259,7 +252,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ---------- BLOCK COPY/PASTE ----------
+// Block copy/paste
 ["copy", "paste", "cut"].forEach(ev => {
   document.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -285,7 +278,7 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
@@ -334,7 +327,6 @@ function loadQuestion() {
 }
 
 function endQuiz() {
-  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizContent").style.display = "none";
@@ -345,10 +337,10 @@ function endQuiz() {
   addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
 }
 
-// ---------- SIMPLE CUP GAME (no animations) ----------
+// ---------- CUP GAME (ball moves only on reset) ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
-  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
+  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge and moves the ball.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
     <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
@@ -360,9 +352,9 @@ function startCupGame() {
     cup.addEventListener("click", () => handleCupClick(i));
     container.appendChild(cup);
   }
-  shuffleBall();
-  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
-  cupShuffleInterval = setInterval(() => shuffleBall(), 5000);
+  // Initial ball placement
+  resetCupGameRound();
+  // Gauge timer
   cupGauge = 100;
   const fill = getEl("cupGaugeFill");
   if (fill) fill.style.width = "100%";
@@ -378,30 +370,14 @@ function startCupGame() {
     }
     if (cupGauge <= 0) {
       applyPenalty("Cup gauge emptied (no correct click)");
-      cupGauge = 100;
-      if (fillEl) fillEl.style.width = "100%";
-      shuffleBall();
+      resetCupGameRound();  // move ball, reset gauge
     }
   }, 100);
 }
 
-function handleCupClick(index) {
-  if (index === cupBallIndex) {
-    cupGauge = 100;
-    const fill = getEl("cupGaugeFill");
-    if (fill) fill.style.width = "100%";
-    addLog("Correct cup clicked – gauge refilled.");
-    shuffleBall();
-  } else {
-    applyPenalty("Wrong cup selected");
-    cupGauge = 100;
-    const fill = getEl("cupGaugeFill");
-    if (fill) fill.style.width = "100%";
-    shuffleBall();
-  }
-}
-
-function shuffleBall() {
+// Resets the round: moves ball to random cup, refills gauge to 100
+function resetCupGameRound() {
+  // Move ball to a new random cup
   const cups = document.querySelectorAll(".cup");
   cups.forEach(cup => cup.innerHTML = "");
   cupBallIndex = Math.floor(Math.random() * 3);
@@ -409,9 +385,23 @@ function shuffleBall() {
   ball.className = "ball";
   cups[cupBallIndex].appendChild(ball);
   addLog(`Ball moved to cup ${cupBallIndex+1}`);
+  // Reset gauge
+  cupGauge = 100;
+  const fill = getEl("cupGaugeFill");
+  if (fill) fill.style.width = "100%";
 }
 
-// ---------- QTE GAME ----------
+function handleCupClick(index) {
+  if (index === cupBallIndex) {
+    addLog("Correct cup clicked – gauge refilled and ball moves.");
+    resetCupGameRound();  // correct: no penalty, just reset round
+  } else {
+    applyPenalty("Wrong cup selected");
+    resetCupGameRound();
+  }
+}
+
+// ---------- QTE GAME (unchanged) ----------
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
   getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
