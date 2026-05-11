@@ -166,14 +166,14 @@ let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 20;
+let pointsPerCorrect = 10;
 
 // Cup game
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 2;
+const CUP_GAUGE_DECREMENT = 1;
 
 // QTE game
 let qteInterval = null;
@@ -285,7 +285,7 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
