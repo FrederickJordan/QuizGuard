@@ -357,7 +357,7 @@ function endQuiz() {
 
 // ---------- CUP GAME WITH ANIMATIONS ----------
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
+  getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Watch the ball, then track it through the shuffle! Click correct cup before gauge empties.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
