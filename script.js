@@ -342,11 +342,9 @@ function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge and moves the ball.";
   getEl("gameArea").innerHTML = `
-  <div class="cup-game-layout">
+  <div style="display: flex; flex-direction: row; align-items: center; gap: 30px;">
     <div class="cups-container" id="cupsContainer"></div>
-    <div class="cup-gauge-wrapper">
-      <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
-    </div>
+    <div class="gauge-box" style="width: 200px;"><div class="gauge-fill" id="cupGaugeFill"></div></div>
   </div>
 `;
   const container = getEl("cupsContainer");
