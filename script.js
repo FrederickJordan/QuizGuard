@@ -347,12 +347,11 @@ function endQuiz() {
 
 // ---------- CUP GAME ----------
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
+  getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
     <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
-    <div style="text-align:center; margin-top:5px;">Pressure Gauge</div>
   `;
   const container = getEl("cupsContainer");
   for (let i=0; i<3; i++) {
