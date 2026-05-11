@@ -1,130 +1,102 @@
 const questionBank = {
 
-  math: {
+  math: [
+    {
+      question: "What is 12 × 8?",
+      answers: ["96", "88", "108", "84"],
+      correct: 0
+    },
+    {
+      question: "What is the derivative of x²?",
+      answers: ["x", "2x", "x²", "2"],
+      correct: 1
+    }
+  ],
 
-    easy: [
-      { question: "What is 5 + 7?", answers: ["12", "10", "13", "14"], correct: 0 },
-      { question: "What is 9 × 3?", answers: ["18", "27", "21", "24"], correct: 1 },
-      { question: "What is 81 ÷ 9?", answers: ["7", "8", "9", "6"], correct: 2 },
-      { question: "What is 15 - 6?", answers: ["7", "8", "9", "10"], correct: 2 },
-      { question: "What is 14 + 5?", answers: ["18", "19", "20", "21"], correct: 1 }
-    ],
+  english: [
+    {
+      question: "Choose the synonym of rapid.",
+      answers: ["Slow", "Fast", "Weak", "Calm"],
+      correct: 1
+    }
+  ],
 
-    medium: [
-      { question: "Solve: 12²", answers: ["124", "132", "144", "154"], correct: 2 },
-      { question: "Value of π (2dp)?", answers: ["3.12", "3.14", "3.16", "3.18"], correct: 1 },
-      { question: "20% of 250?", answers: ["40", "45", "50", "55"], correct: 2 },
-      { question: "7 × 8 - 12?", answers: ["44", "46", "48", "50"], correct: 0 },
-      { question: "√169?", answers: ["11", "12", "13", "14"], correct: 2 }
-    ],
+  computer_science: [
+    {
+      question: "Which data structure uses FIFO?",
+      answers: ["Stack", "Queue", "Tree", "Graph"],
+      correct: 1
+    }
+  ],
 
-    hard: [
-      { question: "Derivative of x²?", answers: ["x", "2x", "x²", "2"], correct: 1 },
-      { question: "Integral of 2x?", answers: ["x² + C", "2x² + C", "x + C", "2 + C"], correct: 0 },
-      { question: "Solve: 2x + 6 = 18", answers: ["4", "5", "6", "7"], correct: 2 },
-      { question: "sin(90°)?", answers: ["0", "0.5", "1", "-1"], correct: 2 },
-      { question: "log₁₀(100)?", answers: ["1", "2", "10", "100"], correct: 1 }
-    ]
-  },
-
-  english: {
-    easy: [
-      { question: "Correct spelling?", answers: ["Recieve", "Receive", "Receeve", "Receve"], correct: 1 },
-      { question: "Synonym of happy?", answers: ["Sad", "Angry", "Joyful", "Weak"], correct: 2 },
-      { question: "Opposite of cold?", answers: ["Warm", "Cool", "Wet", "Soft"], correct: 0 },
-      { question: "Which is noun?", answers: ["Run", "Beautiful", "Table", "Quickly"], correct: 2 },
-      { question: "___ apple", answers: ["A", "An", "The", "None"], correct: 1 }
-    ],
-    medium: [
-      { question: "Synonym of rapid?", answers: ["Slow", "Fast", "Weak", "Calm"], correct: 1 },
-      { question: "Adjective?", answers: ["Quickly", "Blue", "Run", "Jump"], correct: 1 },
-      { question: "Correct sentence?", answers: ["She go school", "She goes school", "She goes to school", "She going school"], correct: 2 },
-      { question: "Past tense of write?", answers: ["Written", "Writing", "Wrote", "Writes"], correct: 2 },
-      { question: "Antonym of expand?", answers: ["Increase", "Stretch", "Shrink", "Grow"], correct: 2 }
-    ],
-    hard: [
-      { question: "‘Time is a thief’ is?", answers: ["Simile", "Metaphor", "Hyperbole", "Irony"], correct: 1 },
-      { question: "Ubiquitous means?", answers: ["Rare", "Everywhere", "Dangerous", "Hidden"], correct: 1 },
-      { question: "Correct punctuation?", answers: ["Lets eat grandma", "Let's eat grandma", "Lets eat, grandma", "Let's eat, grandma"], correct: 3 },
-      { question: "Adverb?", answers: ["Beautiful", "Happiness", "Swiftly", "Bright"], correct: 2 },
-      { question: "Command sentence?", answers: ["Declarative", "Interrogative", "Imperative", "Exclamatory"], correct: 2 }
-    ]
-  },
-
-  computer_science: {
-    easy: [
-      { question: "CPU stands for?", answers: ["Central Process Unit", "Central Processing Unit", "Computer Unit", "Central Power Unit"], correct: 1 },
-      { question: "Input device?", answers: ["Monitor", "Keyboard", "Speaker", "Printer"], correct: 1 },
-      { question: "Software?", answers: ["Mouse", "Keyboard", "Windows", "CPU"], correct: 2 },
-      { question: "Binary digits?", answers: ["1 and 2", "0 and 1", "2 and 3", "8 and 9"], correct: 1 },
-      { question: "Windows created by?", answers: ["Apple", "Google", "Microsoft", "Intel"], correct: 2 }
-    ],
-    medium: [
-      { question: "FIFO structure?", answers: ["Stack", "Queue", "Tree", "Graph"], correct: 1 },
-      { question: "HTML used for?", answers: ["Styling", "Logic", "Structure", "Database"], correct: 2 },
-      { question: "CSS used for?", answers: ["Structure", "Styling", "Database", "CPU"], correct: 1 },
-      { question: "RAM stands for?", answers: ["Random Access Memory", "Read Access Memory", "Run Memory", "Rapid Access"], correct: 0 },
-      { question: "JS comment?", answers: ["//", "##", "<!--", "**"], correct: 0 }
-    ],
-    hard: [
-      { question: "Binary search complexity?", answers: ["O(n)", "O(log n)", "O(n²)", "O(1)"], correct: 1 },
-      { question: "Secure protocol?", answers: ["HTTP", "FTP", "HTTPS", "SMTP"], correct: 2 },
-      { question: "LIFO structure?", answers: ["Queue", "Stack", "Array", "Tree"], correct: 1 },
-      { question: "SQL stands for?", answers: ["Structured Query Language", "Simple Query Language", "System Query Logic", "None"], correct: 0 },
-      { question: "Fast sorting?", answers: ["Bubble", "Selection", "Quick Sort", "Insertion"], correct: 2 }
-    ]
-  },
-
-  science: {
-    easy: [
-      { question: "Red planet?", answers: ["Mars", "Venus", "Earth", "Jupiter"], correct: 0 },
-      { question: "Breathing gas?", answers: ["CO2", "Oxygen", "Hydrogen", "Helium"], correct: 1 },
-      { question: "H2O?", answers: ["Salt", "Water", "Gas", "Oxygen"], correct: 1 },
-      { question: "Insect legs?", answers: ["4", "6", "8", "10"], correct: 1 },
-      { question: "Closest star?", answers: ["Sirius", "Sun", "Moon", "Mars"], correct: 1 }
-    ],
-    medium: [
-      { question: "Gold symbol?", answers: ["Ag", "Au", "Gd", "Go"], correct: 1 },
-      { question: "Gravity causes?", answers: ["Orbit", "Noise", "Heat", "Light"], correct: 0 },
-      { question: "DNA found in?", answers: ["Nucleus", "Membrane", "Wall", "Skin"], correct: 0 },
-      { question: "Universal donor?", answers: ["A", "B", "AB", "O-"], correct: 3 },
-      { question: "Water boils at?", answers: ["90", "95", "100", "110"], correct: 2 }
-    ],
-    hard: [
-      { question: "Negative particle?", answers: ["Proton", "Neutron", "Electron", "Photon"], correct: 2 },
-      { question: "Newton 3rd law?", answers: ["Inertia", "F=ma", "Action-reaction", "Gravity"], correct: 2 },
-      { question: "Speed of light?", answers: ["300k km/s", "150k", "30k", "3k"], correct: 0 },
-      { question: "Neutral pH?", answers: ["0", "5", "7", "14"], correct: 2 },
-      { question: "Blood pump?", answers: ["Lungs", "Heart", "Brain", "Liver"], correct: 1 }
-    ]
-  }
+  science: [
+    {
+      question: "What planet is called the Red Planet?",
+      answers: ["Mars", "Venus", "Mercury", "Saturn"],
+      correct: 0
+    }
+  ]
 };
 
-/* ================= STATE ================= */
-
 let questions = [];
+
 let currentQuestion = 0;
 let score = 0;
 let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
+
 let gameMode = "cups";
 
-const PENALTY = 0.5;
+const PENALTY_AMOUNT = 0.5;
 
-/* ================= HELPERS ================= */
+/* ================================= */
+/* HELPER */
+/* ================================= */
 
-const $ = (id) => document.getElementById(id);
+function getEl(id) {
+  return document.getElementById(id);
+}
 
-/* ================= HOME ================= */
+/* ================================= */
+/* LOG SYSTEM */
+/* ================================= */
+
+function addLog(message) {
+
+  const logArea = getEl("logArea");
+
+  if (!logArea) return;
+
+  const time =
+    new Date().toLocaleTimeString();
+
+  const entry =
+    document.createElement("div");
+
+  entry.innerHTML =
+    `<strong>[${time}]</strong> ${message}`;
+
+  logArea.prepend(entry);
+
+  while (logArea.children.length > 10) {
+    logArea.removeChild(logArea.lastChild);
+  }
+}
+
+/* ================================= */
+/* HOME SCREEN */
+/* ================================= */
 
 function startQuizApp() {
 
-  const subject = $("subjectSelect").value;
-  const difficulty = $("difficultySelect").value;
-  const minigame = $("minigameSelect").value;
+  const subject =
+    getEl("subjectSelect").value;
 
-  questions = questionBank[subject][difficulty];
+  const selectedMinigame =
+    getEl("minigameSelect").value;
+
+  questions = questionBank[subject];
 
   currentQuestion = 0;
   score = 0;
@@ -132,224 +104,477 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
 
-  gameMode = (minigame === "random")
-    ? (Math.random() < 0.5 ? "cups" : "qte")
-    : minigame;
+  if (selectedMinigame === "random") {
 
-  $("homeScreen").style.display = "none";
-  $("quizApp").style.display = "flex";
+    gameMode =
+      Math.random() < 0.5 ? "cups" : "qte";
 
-  updateUI();
+  } else {
+
+    gameMode = selectedMinigame;
+  }
+
+  getEl("homeScreen").style.display = "none";
+
+  getEl("quizApp").style.display = "flex";
+
+  updateStats();
+
   loadQuestion();
 
-  (gameMode === "cups") ? startCupGame() : startQTE();
+  if (gameMode === "cups") {
+    startCupGame();
+  } else {
+    startQTEGame();
+  }
 
-  log("Quiz started");
+  addLog("Quiz started.");
 }
 
-/* ================= QUIZ ================= */
+function openQuestionEditor() {
+
+  getEl("homeScreen").style.display = "none";
+
+  getEl("editorScreen").style.display = "block";
+
+  renderQuestionEditor();
+}
+
+function closeQuestionEditor() {
+
+  getEl("editorScreen").style.display = "none";
+
+  getEl("homeScreen").style.display = "flex";
+}
+
+/* ================================= */
+/* QUESTION EDITOR */
+/* ================================= */
+
+function renderQuestionEditor() {
+
+  const subject =
+    getEl("editorSubjectSelect").value;
+
+  const container =
+    getEl("questionEditorList");
+
+  container.innerHTML = "";
+
+  questionBank[subject].forEach((q, index) => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "question-edit-card";
+
+    div.innerHTML = `
+
+      <input type="text"
+             value="${q.question}"
+             onchange="updateQuestion('${subject}', ${index}, 'question', this.value)">
+
+      <input type="text"
+             value="${q.answers[0]}"
+             onchange="updateAnswer('${subject}', ${index}, 0, this.value)">
+
+      <input type="text"
+             value="${q.answers[1]}"
+             onchange="updateAnswer('${subject}', ${index}, 1, this.value)">
+
+      <input type="text"
+             value="${q.answers[2]}"
+             onchange="updateAnswer('${subject}', ${index}, 2, this.value)">
+
+      <input type="text"
+             value="${q.answers[3]}"
+             onchange="updateAnswer('${subject}', ${index}, 3, this.value)">
+
+      <input type="number"
+             value="${q.correct}"
+             min="0"
+             max="3"
+             onchange="updateQuestion('${subject}', ${index}, 'correct', parseInt(this.value))">
+
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function updateQuestion(subject, index, field, value) {
+
+  questionBank[subject][index][field] =
+    value;
+
+  addLog("Question updated.");
+}
+
+function updateAnswer(subject, index, answerIndex, value) {
+
+  questionBank[subject][index]
+    .answers[answerIndex] = value;
+
+  addLog("Answer updated.");
+}
+
+function addNewQuestion() {
+
+  const subject =
+    getEl("editorSubjectSelect").value;
+
+  const question =
+    getEl("newQuestionText").value;
+
+  const answers = [
+
+    getEl("answer1").value,
+    getEl("answer2").value,
+    getEl("answer3").value,
+    getEl("answer4").value
+
+  ];
+
+  const correct =
+    parseInt(getEl("correctAnswer").value);
+
+  questionBank[subject].push({
+    question,
+    answers,
+    correct
+  });
+
+  renderQuestionEditor();
+
+  addLog("New question added.");
+
+  getEl("newQuestionText").value = "";
+  getEl("answer1").value = "";
+  getEl("answer2").value = "";
+  getEl("answer3").value = "";
+  getEl("answer4").value = "";
+  getEl("correctAnswer").value = "";
+}
+
+/* ================================= */
+/* QUIZ SYSTEM */
+/* ================================= */
 
 function loadQuestion() {
 
-  if (currentQuestion >= questions.length) return endQuiz();
+  if (currentQuestion >= questions.length) {
 
-  const q = questions[currentQuestion];
+    endQuiz();
 
-  $("questionNumber").textContent =
-    `Question ${currentQuestion + 1}/${questions.length}`;
+    return;
+  }
 
-  $("questionText").textContent = q.question;
-  $("answersContainer").innerHTML = "";
+  const q =
+    questions[currentQuestion];
 
-  q.answers.forEach((a, i) => {
+  getEl("questionNumber").textContent =
+    `Question ${currentQuestion + 1} / ${questions.length}`;
 
-    const btn = document.createElement("button");
-    btn.className = "answer-btn";
-    btn.textContent = a;
+  getEl("questionText").textContent =
+    q.question;
 
-    btn.onclick = () => {
+  getEl("answersContainer").innerHTML = "";
 
-      if (i === q.correct) {
+  q.answers.forEach((answer, index) => {
+
+    const btn =
+      document.createElement("button");
+
+    btn.className =
+      "answer-btn";
+
+    btn.textContent =
+      answer;
+
+    btn.addEventListener("click", () => {
+
+      if (index === q.correct) {
+
         score += 2;
-        log("Correct");
+
+        addLog("Correct answer selected.");
+
       } else {
-        log("Wrong");
+
+        addLog("Wrong answer selected.");
       }
 
-      currentQuestion++;
-      updateUI();
-      loadQuestion();
-    };
+      updateStats();
 
-    $("answersContainer").appendChild(btn);
+      currentQuestion++;
+
+      loadQuestion();
+    });
+
+    getEl("answersContainer")
+      .appendChild(btn);
   });
 }
 
-/* ================= MINIGAMES ================= */
+function updateStats() {
 
-let cupIndex = 0;
+  getEl("score").textContent =
+    Math.max(score - penalties, 0).toFixed(1);
+
+  getEl("penalties").textContent =
+    penalties.toFixed(1);
+
+  getEl("tabSwitches").textContent =
+    tabSwitches;
+}
+
+function applyPenalty(reason) {
+
+  penalties += PENALTY_AMOUNT;
+
+  failures++;
+
+  updateStats();
+
+  addLog(`Penalty applied: ${reason}`);
+}
+
+function endQuiz() {
+
+  getEl("quizContent").style.display =
+    "none";
+
+  getEl("resultsScreen").style.display =
+    "block";
+
+  getEl("finalScore").textContent =
+    Math.max(score - penalties, 0).toFixed(1);
+
+  getEl("finalFailures").textContent =
+    failures;
+
+  getEl("finalTabs").textContent =
+    tabSwitches;
+
+  addLog("Quiz completed.");
+}
+
+/* ================================= */
+/* BLOCK COPY PASTE */
+/* ================================= */
+
+["copy", "paste", "cut"].forEach(eventName => {
+
+  document.addEventListener(eventName, (e) => {
+
+    e.preventDefault();
+
+    addLog(`${eventName} blocked`);
+  });
+});
+
+/* ================================= */
+/* TAB SWITCH DETECTION */
+/* ================================= */
+
+document.addEventListener("visibilitychange", () => {
+
+  if (document.hidden) {
+
+    tabSwitches++;
+
+    updateStats();
+
+    getEl("tabWarning").style.display =
+      "flex";
+
+    addLog("Tab switch detected.");
+
+  } else {
+
+    getEl("tabWarning").style.display =
+      "none";
+  }
+});
+
+/* ================================= */
+/* CUP GAME */
+/* ================================= */
+
+let cupBallIndex = 0;
 
 function startCupGame() {
 
-  $("gameTitle").textContent = "Find Ball";
-  $("gameDescription").textContent = "Click correct cup";
+  getEl("gameTitle").textContent =
+    "Find The Ball";
 
-  $("gameArea").innerHTML = `
-    <div class="cups-container">
-      <div class="cup"></div>
-      <div class="cup"></div>
-      <div class="cup"></div>
+  getEl("gameDescription").textContent =
+    "Track the correct cup continuously while answering questions.";
+
+  getEl("gameArea").innerHTML = `
+
+    <div>
+
+      <div class="cups-container"
+           id="cupsContainer">
+      </div>
+
     </div>
+
   `;
 
-  document.querySelectorAll(".cup").forEach((c, i) => {
-    c.onclick = () => {
-      if (i === cupIndex) log("Cup correct");
-      else penalty("Cup wrong");
-      shuffle();
-    };
+  const container =
+    getEl("cupsContainer");
+
+  for (let i = 0; i < 3; i++) {
+
+    const cup =
+      document.createElement("div");
+
+    cup.className = "cup";
+
+    cup.addEventListener("click",
+      () => handleCupClick(i));
+
+    container.appendChild(cup);
+  }
+
+  shuffleBall();
+
+  setInterval(() => {
+
+    shuffleBall();
+
+  }, 5000);
+}
+
+function shuffleBall() {
+
+  const cups =
+    document.querySelectorAll(".cup");
+
+  cups.forEach(cup => {
+    cup.innerHTML = "";
   });
 
-  setInterval(shuffle, 4000);
-  shuffle();
-}
+  cupBallIndex =
+    Math.floor(Math.random() * 3);
 
-function shuffle() {
+  const ball =
+    document.createElement("div");
 
-  const cups = document.querySelectorAll(".cup");
-  cups.forEach(c => c.innerHTML = "");
-
-  cupIndex = Math.floor(Math.random() * 3);
-
-  const ball = document.createElement("div");
   ball.className = "ball";
 
-  cups[cupIndex].appendChild(ball);
+  cups[cupBallIndex]
+    .appendChild(ball);
 }
 
-/* QTE */
+function handleCupClick(index) {
 
-let key = "A";
+  if (index === cupBallIndex) {
+
+    addLog("Correct cup clicked.");
+
+  } else {
+
+    applyPenalty("Wrong cup selected");
+  }
+
+  shuffleBall();
+}
+
+/* ================================= */
+/* QTE GAME */
+/* ================================= */
+
 let gauge = 100;
+let targetKey = "A";
 
-function startQTE() {
+function startQTEGame() {
 
-  $("gameTitle").textContent = "QTE";
-  $("gameDescription").textContent = "Press key fast";
+  getEl("gameTitle").textContent =
+    "QTE Pressure Gauge";
 
-  $("gameArea").innerHTML = `
+  getEl("gameDescription").textContent =
+    "Press the correct key continuously to keep the gauge alive.";
+
+  getEl("gameArea").innerHTML = `
+
     <div class="qte-container">
-      <div class="target-key" id="tk"></div>
-      <div class="gauge-box"><div class="gauge-fill" id="gf"></div></div>
+
+      <div class="target-key"
+           id="targetKey">
+      </div>
+
+      <div class="gauge-box">
+
+        <div class="gauge-fill"
+             id="gaugeFill">
+        </div>
+
+      </div>
+
     </div>
+
   `;
 
-  key = randomKey();
-  $("tk").textContent = key;
+  targetKey = randomLetter();
+
+  getEl("targetKey").textContent =
+    targetKey;
+
+  gauge = 100;
 
   setInterval(() => {
 
     gauge -= 1;
 
-    $("gf").style.width = gauge + "%";
+    getEl("gaugeFill").style.width =
+      gauge + "%";
 
     if (gauge <= 0) {
+
       gauge = 100;
-      penalty("Gauge empty");
+
+      applyPenalty("Gauge emptied");
+
+      targetKey = randomLetter();
+
+      getEl("targetKey").textContent =
+        targetKey;
     }
 
-  }, 120);
+  }, 100);
 }
 
-function randomKey() {
-  return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
+function randomLetter() {
+
+  const letters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  return letters[
+    Math.floor(Math.random() * letters.length)
+  ];
 }
 
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", (e) => {
 
   if (gameMode !== "qte") return;
 
-  if (e.key.toUpperCase() === key) {
+  if (e.key.toUpperCase() === targetKey) {
 
-    gauge = Math.min(100, gauge + 10);
-    key = randomKey();
-    $("tk").textContent = key;
+    gauge += 12;
+
+    if (gauge > 100) {
+      gauge = 100;
+    }
+
+    targetKey = randomLetter();
+
+    getEl("targetKey").textContent =
+      targetKey;
+
+    addLog(`Correct key pressed: ${e.key.toUpperCase()}`);
   }
 });
-
-/* ================= PENALTY ================= */
-
-function penalty(reason) {
-  penalties += PENALTY;
-  failures++;
-  log("Penalty: " + reason);
-  updateUI();
-}
-
-/* ================= UI ================= */
-
-function updateUI() {
-
-  $("score").textContent = Math.max(score - penalties, 0).toFixed(1);
-  $("penalties").textContent = penalties.toFixed(1);
-  $("tabSwitches").textContent = tabSwitches;
-}
-
-function endQuiz() {
-
-  $("quizContent").style.display = "none";
-  $("resultsScreen").style.display = "block";
-
-  $("finalScore").textContent = Math.max(score - penalties, 0).toFixed(1);
-  $("finalFailures").textContent = failures;
-  $("finalTabs").textContent = tabSwitches;
-}
-
-/* ================= LOG ================= */
-
-function log(msg) {
-
-  const logArea = $("logArea");
-  if (!logArea) return;
-
-  const div = document.createElement("div");
-  div.textContent = msg;
-
-  logArea.prepend(div);
-
-  if (logArea.children.length > 10)
-    logArea.removeChild(logArea.lastChild);
-}
-
-/* ================= ANTI CHEAT ================= */
-
-document.addEventListener("visibilitychange", () => {
-
-  if (document.hidden) {
-    tabSwitches++;
-    $("tabWarning").style.display = "flex";
-  } else {
-    $("tabWarning").style.display = "none";
-  }
-
-  updateUI();
-});
-
-["copy", "paste", "cut"].forEach(ev => {
-  document.addEventListener(ev, e => {
-    e.preventDefault();
-    log(ev + " blocked");
-  });
-});
-
-/* ================= EDITOR (simple placeholder hooks) ================= */
-
-function openQuestionEditor() {
-  $("homeScreen").style.display = "none";
-  $("editorScreen").style.display = "block";
-}
-
-function closeQuestionEditor() {
-  $("editorScreen").style.display = "none";
-  $("homeScreen").style.display = "flex";
-}
