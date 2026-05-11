@@ -1,10 +1,8 @@
 /* ==========================================
-   QuizGuard – Final with Cup Animations
-   10 questions per difficulty, score 100,
-   gauge warnings, back button only at end
+   QuizGuard – Final Version with Gauge Warnings
    ========================================== */
 
-// ---------- QUESTION BANK (10 per difficulty) ----------
+// ---------- EXPANDED QUESTION BANK (10 per difficulty) ----------
 const questionBank = {
   math: {
     easy: [
@@ -168,19 +166,14 @@ let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 10;
+let pointsPerCorrect = 20;
 
 // Cup game
+let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 1;
-
-// Cup animation variables
-let isAnimating = false;
-let currentShuffleInterval = null;
-let revealTimeout = null;
-let shuffleStopTimeout = null;
+const CUP_GAUGE_DECREMENT = 2;
 
 // QTE game
 let qteInterval = null;
@@ -189,7 +182,7 @@ let targetKey = "A";
 
 // Warning cooldown
 let lastWarningTime = 0;
-const WARNING_COOLDOWN_MS = 2000;
+const WARNING_COOLDOWN_MS = 2000; // 2 seconds
 
 // Helper
 function getEl(id) { return document.getElementById(id); }
@@ -199,6 +192,7 @@ function showGaugeWarning(message) {
   const now = Date.now();
   if (now - lastWarningTime < WARNING_COOLDOWN_MS) return;
   lastWarningTime = now;
+
   let warningDiv = document.getElementById('gaugeWarningPopup');
   if (!warningDiv) {
     warningDiv = document.createElement('div');
@@ -242,9 +236,7 @@ function updateStats() {
 
 // ---------- CLEANUP & RETURN HOME ----------
 function cleanupAndReturnHome() {
-  if (currentShuffleInterval) clearInterval(currentShuffleInterval);
-  if (revealTimeout) clearTimeout(revealTimeout);
-  if (shuffleStopTimeout) clearTimeout(shuffleStopTimeout);
+  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizApp").style.display = "none";
@@ -253,7 +245,7 @@ function cleanupAndReturnHome() {
 }
 window.returnToHome = cleanupAndReturnHome;
 
-// ---------- TAB SWITCH DETECTION (penalty) ----------
+// ---------- TAB SWITCH DETECTION ----------
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
@@ -293,7 +285,7 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
@@ -308,7 +300,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions | Max score 100`);
 }
 
 function loadQuestion() {
@@ -342,9 +334,7 @@ function loadQuestion() {
 }
 
 function endQuiz() {
-  if (currentShuffleInterval) clearInterval(currentShuffleInterval);
-  if (revealTimeout) clearTimeout(revealTimeout);
-  if (shuffleStopTimeout) clearTimeout(shuffleStopTimeout);
+  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizContent").style.display = "none";
@@ -355,13 +345,14 @@ function endQuiz() {
   addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
 }
 
-// ---------- CUP GAME WITH ANIMATIONS ----------
+// ---------- CUP GAME ----------
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball";
-  getEl("gameDescription").textContent = "Watch the ball, then track it through the shuffle! Click correct cup before gauge empties.";
+  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
+  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
     <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
+    <div style="text-align:center; margin-top:5px;">Pressure Gauge</div>
   `;
   const container = getEl("cupsContainer");
   for (let i=0; i<3; i++) {
@@ -370,14 +361,9 @@ function startCupGame() {
     cup.addEventListener("click", () => handleCupClick(i));
     container.appendChild(cup);
   }
-  // Reset animation state
-  if (currentShuffleInterval) clearInterval(currentShuffleInterval);
-  if (revealTimeout) clearTimeout(revealTimeout);
-  if (shuffleStopTimeout) clearTimeout(shuffleStopTimeout);
-  isAnimating = false;
-  // Start first round
-  startNewCupRound();
-  // Gauge timer
+  shuffleBall();
+  if (cupShuffleInterval) clearInterval(cupShuffleInterval);
+  cupShuffleInterval = setInterval(() => shuffleBall(), 5000);
   cupGauge = 100;
   const fill = getEl("cupGaugeFill");
   if (fill) fill.style.width = "100%";
@@ -388,91 +374,45 @@ function startCupGame() {
     if (cupGauge < 0) cupGauge = 0;
     const fillEl = getEl("cupGaugeFill");
     if (fillEl) fillEl.style.width = cupGauge + "%";
+
+    // Warning when gauge <= 20
     if (cupGauge <= 20 && cupGauge > 0) {
       showGaugeWarning("⚠️ Cup gauge low! Click correct cup!");
     }
+
     if (cupGauge <= 0) {
       applyPenalty("Cup gauge emptied (no correct click)");
       cupGauge = 100;
       if (fillEl) fillEl.style.width = "100%";
-      startNewCupRound();
+      shuffleBall();
     }
   }, 100);
 }
 
-function startNewCupRound() {
-  // Cancel any ongoing animations
-  if (currentShuffleInterval) clearInterval(currentShuffleInterval);
-  if (revealTimeout) clearTimeout(revealTimeout);
-  if (shuffleStopTimeout) clearTimeout(shuffleStopTimeout);
-  isAnimating = true;
-
-  // 1) Reveal ball under a random cup
-  cupBallIndex = Math.floor(Math.random() * 3);
-  const cups = document.querySelectorAll(".cup");
-  cups.forEach((cup, idx) => {
-    cup.innerHTML = "";
-    if (idx === cupBallIndex) {
-      const ball = document.createElement("div");
-      ball.className = "ball";
-      cup.appendChild(ball);
-    }
-  });
-  addLog(`Ball revealed under cup ${cupBallIndex+1}`);
-
-  // 2) After 1 sec, start shuffling cups (swap DOM positions)
-  revealTimeout = setTimeout(() => {
-    // Remove ball visual
-    cups.forEach(cup => cup.innerHTML = "");
-    const container = getEl("cupsContainer");
-    const cupElements = Array.from(container.children);
-    // Shuffle every 200ms for 2 seconds
-    currentShuffleInterval = setInterval(() => {
-      const idx1 = Math.floor(Math.random() * 3);
-      let idx2 = Math.floor(Math.random() * 3);
-      while (idx1 === idx2) idx2 = Math.floor(Math.random() * 3);
-      const cup1 = cupElements[idx1];
-      const cup2 = cupElements[idx2];
-      if (cup1 && cup2) {
-        container.insertBefore(cup2, cup1);
-        // Update the array
-        const newOrder = Array.from(container.children);
-        cupElements.length = 0;
-        cupElements.push(...newOrder);
-      }
-    }, 200);
-
-    // 3) Stop shuffling after 2 seconds, randomly reassign ball position (simulate hidden ball)
-    shuffleStopTimeout = setTimeout(() => {
-      if (currentShuffleInterval) clearInterval(currentShuffleInterval);
-      currentShuffleInterval = null;
-      // The ball is now hidden; for simplicity, we choose a new random cup as correct.
-      // In a real game we would track the ball, but this works for demo.
-      cupBallIndex = Math.floor(Math.random() * 3);
-      addLog(`Shuffling ended. Ball is now under a random cup (hidden).`);
-      isAnimating = false;
-    }, 2000);
-  }, 1000);
-}
-
 function handleCupClick(index) {
-  if (isAnimating) {
-    addLog("Click ignored – cups are shuffling, wait!");
-    return;
-  }
   if (index === cupBallIndex) {
     cupGauge = 100;
     const fill = getEl("cupGaugeFill");
     if (fill) fill.style.width = "100%";
     addLog("Correct cup clicked – gauge refilled.");
-    startNewCupRound();
+    shuffleBall();
   } else {
     applyPenalty("Wrong cup selected");
     cupGauge = 100;
     const fill = getEl("cupGaugeFill");
     if (fill) fill.style.width = "100%";
-    startNewCupRound();
+    shuffleBall();
   }
+}
+
+function shuffleBall() {
+  const cups = document.querySelectorAll(".cup");
+  cups.forEach(cup => cup.innerHTML = "");
+  cupBallIndex = Math.floor(Math.random() * 3);
+  const ball = document.createElement("div");
+  ball.className = "ball";
+  cups[cupBallIndex].appendChild(ball);
+  addLog(`Ball moved to cup ${cupBallIndex+1}`);
 }
 
 // ---------- QTE GAME ----------
@@ -497,9 +437,12 @@ function startQTEGame() {
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
+
+    // Warning when gauge <= 20
     if (qteGauge <= 20 && qteGauge > 0) {
       showGaugeWarning("⚠️ QTE gauge low! Press correct key!");
     }
+
     if (qteGauge <= 0) {
       applyPenalty("QTE gauge emptied");
       qteGauge = 100;
