@@ -1,11 +1,11 @@
 /* ==========================================
-   QuizGuard – Full Question Bank (5 per difficulty)
-   Cup game now has a visual gauge bar that depletes.
-   Penalty when gauge empties (no correct click in time).
-   Back button to return to home with cleanup.
+   QuizGuard – Final Version
+   – No back button during active quiz
+   – Quiz reset properly hides results screen
+   – Tab minimize/switch applies penalty
    ========================================== */
 
-// ---------- QUESTION BANK ----------
+// ---------- QUESTION BANK (full 5 per difficulty) ----------
 const questionBank = {
   math: {
     easy: [
@@ -101,7 +101,7 @@ const questionBank = {
   }
 };
 
-// ---------- GLOBAL VARIABLES ----------
+// GLOBALS
 let questions = [];
 let currentQuestion = 0;
 let score = 0;
@@ -115,18 +115,18 @@ const PENALTY_AMOUNT = 0.5;
 let cupShuffleInterval = null;
 let cupTimerInterval = null;
 let cupBallIndex = 0;
-let cupGauge = 100;        // 0 to 100
-let cupGaugeDecrement = 2; // % per 0.1s
+let cupGauge = 100;
+let cupGaugeDecrement = 2;
 
 // QTE game
 let qteInterval = null;
 let qteGauge = 100;
 let targetKey = "A";
 
-// ---------- HELPER ----------
+// Helper
 function getEl(id) { return document.getElementById(id); }
 
-// ---------- LOG SYSTEM ----------
+// Logging
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -137,33 +137,63 @@ function addLog(message) {
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
 
-// ---------- CLEANUP & RETURN TO HOME ----------
+// Cleanup & return home
 function cleanupAndReturnHome() {
-  // Stop all intervals
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
-  
-  // Hide quiz, show home
   getEl("quizApp").style.display = "none";
   getEl("homeScreen").style.display = "flex";
-  
-  // Optionally reset any UI states
   addLog("Returned to home screen.");
 }
-
-// Make globally accessible for HTML buttons
 window.returnToHome = cleanupAndReturnHome;
 
-// ---------- START QUIZ ----------
+// Apply penalty
+function applyPenalty(reason) {
+  penalties += PENALTY_AMOUNT;
+  failures++;
+  updateStats();
+  addLog(`Penalty applied: ${reason}`);
+}
+
+function updateStats() {
+  getEl("score").textContent = Math.max(score - penalties, 0).toFixed(1);
+  getEl("penalties").textContent = penalties.toFixed(1);
+  getEl("tabSwitches").textContent = tabSwitches;
+}
+
+// Tab switch detection – now applies penalty when hidden
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && getEl("quizApp").style.display === "flex") {
+    tabSwitches++;
+    applyPenalty("Tab switched/minimised");
+    getEl("tabWarning").style.display = "flex";
+    addLog("Tab switch detected – penalty applied.");
+    setTimeout(() => {
+      if (getEl("tabWarning")) getEl("tabWarning").style.display = "none";
+    }, 2000);
+  } else {
+    if (getEl("tabWarning")) getEl("tabWarning").style.display = "none";
+  }
+});
+
+// Block copy/paste
+["copy", "paste", "cut"].forEach(ev => {
+  document.addEventListener(ev, (e) => {
+    e.preventDefault();
+    addLog(`${ev} blocked`);
+  });
+});
+
+// ---------- QUIZ CORE ----------
 function startQuizApp() {
   const subject = getEl("subjectSelect").value;
   const difficulty = getEl("difficultySelect").value;
-  const selectedMinigame = getEl("minigameSelect").value;
+  const selected = getEl("minigameSelect").value;
 
   questions = questionBank[subject][difficulty];
   if (!questions || questions.length === 0) {
-    alert("No questions found for this subject and difficulty.");
+    alert("No questions for this subject/difficulty.");
     return;
   }
 
@@ -173,11 +203,12 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
 
-  if (selectedMinigame === "random") {
-    gameMode = Math.random() < 0.5 ? "cups" : "qte";
-  } else {
-    gameMode = selectedMinigame;
-  }
+  if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
+  else gameMode = selected;
+
+  // Reset UI: hide results, show quiz content
+  getEl("quizContent").style.display = "block";
+  getEl("resultsScreen").style.display = "none";
 
   getEl("homeScreen").style.display = "none";
   getEl("quizApp").style.display = "flex";
@@ -187,132 +218,29 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | Minigame: ${gameMode}`);
+  addLog(`Quiz started: ${subject} - ${difficulty} | ${gameMode}`);
 }
 
-// ---------- EDITOR FUNCTIONS (unchanged) ----------
-function openQuestionEditor() {
-  getEl("homeScreen").style.display = "none";
-  getEl("editorScreen").style.display = "block";
-  renderQuestionEditor();
-}
-
-function closeQuestionEditor() {
-  getEl("editorScreen").style.display = "none";
-  getEl("homeScreen").style.display = "flex";
-}
-
-function renderQuestionEditor() {
-  const subject = getEl("editorSubjectSelect").value;
-  const difficulty = getEl("editorDifficultySelect").value;
-  const container = getEl("questionEditorList");
-  container.innerHTML = "";
-
-  const qs = questionBank[subject][difficulty];
-  if (!qs) return;
-
-  qs.forEach((q, idx) => {
-    const div = document.createElement("div");
-    div.className = "question-edit-card";
-    div.innerHTML = `
-      <input type="text" value="${escapeHtml(q.question)}" data-field="question" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[0])}" data-answer="0" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[1])}" data-answer="1" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[2])}" data-answer="2" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[3])}" data-answer="3" data-index="${idx}">
-      <input type="number" value="${q.correct}" min="0" max="3" data-correct data-index="${idx}">
-    `;
-    container.appendChild(div);
-  });
-  attachEditorEvents(subject, difficulty);
-}
-
-function attachEditorEvents(subject, difficulty) {
-  document.querySelectorAll('[data-field]').forEach(inp => {
-    inp.removeEventListener('change', (e) => {});
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
-      questionBank[subject][difficulty][idx].question = inp.value;
-      addLog("Question updated.");
-    });
-  });
-  document.querySelectorAll('[data-answer]').forEach(inp => {
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
-      const ansIdx = parseInt(inp.dataset.answer);
-      questionBank[subject][difficulty][idx].answers[ansIdx] = inp.value;
-      addLog("Answer updated.");
-    });
-  });
-  document.querySelectorAll('[data-correct]').forEach(inp => {
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
-      questionBank[subject][difficulty][idx].correct = parseInt(inp.value);
-      addLog("Correct answer updated.");
-    });
-  });
-}
-
-function addNewQuestion() {
-  const subject = getEl("editorSubjectSelect").value;
-  const difficulty = getEl("editorDifficultySelect").value;
-  const qText = getEl("newQuestionText").value;
-  const answers = [
-    getEl("answer1").value,
-    getEl("answer2").value,
-    getEl("answer3").value,
-    getEl("answer4").value
-  ];
-  const correct = parseInt(getEl("correctAnswer").value);
-  if (!qText || answers.some(a => !a) || isNaN(correct)) {
-    alert("Please fill all fields.");
-    return;
-  }
-  questionBank[subject][difficulty].push({
-    question: qText,
-    answers: answers,
-    correct: correct
-  });
-  renderQuestionEditor();
-  addLog("New question added.");
-  getEl("newQuestionText").value = "";
-  getEl("answer1").value = "";
-  getEl("answer2").value = "";
-  getEl("answer3").value = "";
-  getEl("answer4").value = "";
-  getEl("correctAnswer").value = "";
-}
-
-function escapeHtml(str) {
-  return str.replace(/[&<>]/g, function(m) {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    if (m === '>') return '&gt;';
-    return m;
-  });
-}
-
-// ---------- QUIZ CORE ----------
 function loadQuestion() {
   if (currentQuestion >= questions.length) {
     endQuiz();
     return;
   }
   const q = questions[currentQuestion];
-  getEl("questionNumber").textContent = `Question ${currentQuestion + 1} / ${questions.length}`;
+  getEl("questionNumber").textContent = `Question ${currentQuestion+1} / ${questions.length}`;
   getEl("questionText").textContent = q.question;
   const container = getEl("answersContainer");
   container.innerHTML = "";
-  q.answers.forEach((answer, idx) => {
+  q.answers.forEach((ans, idx) => {
     const btn = document.createElement("button");
     btn.className = "answer-btn";
-    btn.textContent = answer;
+    btn.textContent = ans;
     btn.addEventListener("click", () => {
       if (idx === q.correct) {
         score += 2;
-        addLog("Correct answer selected.");
+        addLog("Correct answer.");
       } else {
-        addLog("Wrong answer selected.");
+        addLog("Wrong answer.");
       }
       updateStats();
       currentQuestion++;
@@ -322,110 +250,64 @@ function loadQuestion() {
   });
 }
 
-function updateStats() {
-  getEl("score").textContent = Math.max(score - penalties, 0).toFixed(1);
-  getEl("penalties").textContent = penalties.toFixed(1);
-  getEl("tabSwitches").textContent = tabSwitches;
-}
-
-function applyPenalty(reason) {
-  penalties += PENALTY_AMOUNT;
-  failures++;
-  updateStats();
-  addLog(`Penalty applied: ${reason}`);
-}
-
 function endQuiz() {
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
-  
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
   getEl("finalScore").textContent = Math.max(score - penalties, 0).toFixed(1);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
-  addLog("Quiz completed.");
+  addLog("Quiz finished.");
 }
 
-// ---------- ANTI-CHEAT ----------
-["copy", "paste", "cut"].forEach(event => {
-  document.addEventListener(event, (e) => {
-    e.preventDefault();
-    addLog(`${event} blocked`);
-  });
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    tabSwitches++;
-    updateStats();
-    getEl("tabWarning").style.display = "flex";
-    addLog("Tab switch detected.");
-  } else {
-    getEl("tabWarning").style.display = "none";
-  }
-});
-
-// ---------- CUP GAME WITH GAUGE BAR ----------
+// ---------- CUP GAME (gauge bar) ----------
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
-  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills the gauge.";
-  
+  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge.";
   getEl("gameArea").innerHTML = `
     <div class="cups-container" id="cupsContainer"></div>
-    <div class="gauge-box" style="margin-top: 20px;">
-      <div class="gauge-fill" id="cupGaugeFill" style="width:100%; height:25px;"></div>
-    </div>
-    <div style="text-align:center; margin-top:8px;">Pressure Gauge</div>
+    <div class="gauge-box"><div class="gauge-fill" id="cupGaugeFill"></div></div>
+    <div style="text-align:center; margin-top:5px;">Pressure Gauge</div>
   `;
-  
   const container = getEl("cupsContainer");
-  for (let i = 0; i < 3; i++) {
+  for (let i=0; i<3; i++) {
     const cup = document.createElement("div");
     cup.className = "cup";
     cup.addEventListener("click", () => handleCupClick(i));
     container.appendChild(cup);
   }
-  
   shuffleBall();
-  
   if (cupShuffleInterval) clearInterval(cupShuffleInterval);
   cupShuffleInterval = setInterval(() => shuffleBall(), 5000);
-  
   cupGauge = 100;
-  const fillEl = getEl("cupGaugeFill");
-  if (fillEl) fillEl.style.width = cupGauge + "%";
-  
+  const fill = getEl("cupGaugeFill");
+  if (fill) fill.style.width = "100%";
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   cupTimerInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
     cupGauge -= cupGaugeDecrement;
     if (cupGauge < 0) cupGauge = 0;
-    const fill = getEl("cupGaugeFill");
-    if (fill) fill.style.width = cupGauge + "%";
-    
+    const fillEl = getEl("cupGaugeFill");
+    if (fillEl) fillEl.style.width = cupGauge + "%";
     if (cupGauge <= 0) {
-      // Gauge empty: penalty, reset gauge, shuffle ball to random cup
-      applyPenalty("Cup gauge emptied (no correct click in time)");
+      applyPenalty("Cup gauge emptied (no correct click)");
       cupGauge = 100;
-      if (fill) fill.style.width = "100%";
+      if (fillEl) fillEl.style.width = "100%";
       shuffleBall();
-      addLog("Cup gauge reset due to timeout.");
     }
-  }, 100); // update every 0.1s
+  }, 100);
 }
 
 function handleCupClick(index) {
   if (index === cupBallIndex) {
-    // Correct: refill gauge, shuffle ball
     cupGauge = 100;
     const fill = getEl("cupGaugeFill");
     if (fill) fill.style.width = "100%";
-    addLog("Correct cup clicked – gauge refilled.");
+    addLog("Correct cup – gauge refilled.");
     shuffleBall();
   } else {
-    // Wrong cup: penalty, reset gauge, shuffle ball
     applyPenalty("Wrong cup selected");
     cupGauge = 100;
     const fill = getEl("cupGaugeFill");
@@ -441,27 +323,24 @@ function shuffleBall() {
   const ball = document.createElement("div");
   ball.className = "ball";
   cups[cupBallIndex].appendChild(ball);
-  addLog(`Ball moved to cup ${cupBallIndex + 1}`);
+  addLog(`Ball moved to cup ${cupBallIndex+1}`);
 }
 
-// ---------- QTE GAME (unchanged but cleaned) ----------
+// ---------- QTE GAME ----------
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
   getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
-  
   getEl("gameArea").innerHTML = `
     <div class="qte-container">
       <div class="target-key" id="targetKey">A</div>
       <div class="gauge-box"><div class="gauge-fill" id="qteGaugeFill"></div></div>
     </div>
   `;
-  
   targetKey = randomLetter();
   getEl("targetKey").textContent = targetKey;
   qteGauge = 100;
   const fill = getEl("qteGaugeFill");
   if (fill) fill.style.width = "100%";
-  
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
@@ -489,11 +368,84 @@ document.addEventListener("keydown", (e) => {
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
     qteGauge = Math.min(100, qteGauge + 20);
-    const fillEl = getEl("qteGaugeFill");
-    if (fillEl) fillEl.style.width = qteGauge + "%";
+    const fill = getEl("qteGaugeFill");
+    if (fill) fill.style.width = qteGauge + "%";
     targetKey = randomLetter();
     const targetEl = getEl("targetKey");
     if (targetEl) targetEl.textContent = targetKey;
     addLog(`Correct key: ${e.key.toUpperCase()}`);
   }
 });
+
+// ---------- EDITOR (unchanged, works with difficulty) ----------
+function openQuestionEditor() {
+  getEl("homeScreen").style.display = "none";
+  getEl("editorScreen").style.display = "block";
+  renderQuestionEditor();
+}
+function closeQuestionEditor() {
+  getEl("editorScreen").style.display = "none";
+  getEl("homeScreen").style.display = "flex";
+}
+function renderQuestionEditor() {
+  const subject = getEl("editorSubjectSelect").value;
+  const difficulty = getEl("editorDifficultySelect").value;
+  const container = getEl("questionEditorList");
+  container.innerHTML = "";
+  const qs = questionBank[subject][difficulty];
+  if (!qs) return;
+  qs.forEach((q, idx) => {
+    const div = document.createElement("div");
+    div.className = "question-edit-card";
+    div.innerHTML = `
+      <input type="text" value="${escapeHtml(q.question)}" data-field="question" data-index="${idx}">
+      <input type="text" value="${escapeHtml(q.answers[0])}" data-answer="0" data-index="${idx}">
+      <input type="text" value="${escapeHtml(q.answers[1])}" data-answer="1" data-index="${idx}">
+      <input type="text" value="${escapeHtml(q.answers[2])}" data-answer="2" data-index="${idx}">
+      <input type="text" value="${escapeHtml(q.answers[3])}" data-answer="3" data-index="${idx}">
+      <input type="number" value="${q.correct}" min="0" max="3" data-correct data-index="${idx}">
+    `;
+    container.appendChild(div);
+  });
+  attachEditorEvents(subject, difficulty);
+}
+function attachEditorEvents(subject, difficulty) {
+  document.querySelectorAll('[data-field]').forEach(inp => {
+    inp.removeEventListener('change', () => {});
+    inp.addEventListener('change', (e) => {
+      const idx = parseInt(inp.dataset.index);
+      questionBank[subject][difficulty][idx].question = inp.value;
+      addLog("Question updated");
+    });
+  });
+  document.querySelectorAll('[data-answer]').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const idx = parseInt(inp.dataset.index);
+      const ansIdx = parseInt(inp.dataset.answer);
+      questionBank[subject][difficulty][idx].answers[ansIdx] = inp.value;
+      addLog("Answer updated");
+    });
+  });
+  document.querySelectorAll('[data-correct]').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const idx = parseInt(inp.dataset.index);
+      questionBank[subject][difficulty][idx].correct = parseInt(inp.value);
+      addLog("Correct answer index updated");
+    });
+  });
+}
+function addNewQuestion() {
+  const subject = getEl("editorSubjectSelect").value;
+  const difficulty = getEl("editorDifficultySelect").value;
+  const qText = getEl("newQuestionText").value;
+  const answers = [getEl("answer1").value, getEl("answer2").value, getEl("answer3").value, getEl("answer4").value];
+  const correct = parseInt(getEl("correctAnswer").value);
+  if (!qText || answers.some(a => !a) || isNaN(correct)) { alert("Fill all fields"); return; }
+  questionBank[subject][difficulty].push({ question: qText, answers, correct });
+  renderQuestionEditor();
+  addLog("New question added");
+  getEl("newQuestionText").value = "";
+  getEl("answer1").value = ""; getEl("answer2").value = ""; getEl("answer3").value = ""; getEl("answer4").value = "";
+  getEl("correctAnswer").value = "";
+}
+function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])); }
