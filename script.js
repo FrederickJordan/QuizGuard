@@ -344,7 +344,7 @@ function startQTEGame() {
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
-    qteGauge -= 2;
+    qteGauge -= 1;
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
@@ -367,7 +367,7 @@ document.addEventListener("keydown", (e) => {
   if (getEl("quizApp").style.display !== "flex") return;
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
-    qteGauge = Math.min(100, qteGauge + 20);
+    qteGauge = Math.min(100, qteGauge + 35);
     const fill = getEl("qteGaugeFill");
     if (fill) fill.style.width = qteGauge + "%";
     targetKey = randomLetter();
