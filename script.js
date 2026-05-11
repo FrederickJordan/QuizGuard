@@ -1,6 +1,3 @@
-# Replace Your Existing `questionBank` in `script.js` With This
-
-```javascript
 const questionBank = {
 
   math: {
