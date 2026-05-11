@@ -5,6 +5,11 @@ const questionBank = {
       question: "What is 12 × 8?",
       answers: ["96", "88", "108", "84"],
       correct: 0
+    },
+    {
+      question: "What is the derivative of x²?",
+      answers: ["x", "2x", "x²", "2"],
+      correct: 1
     }
   ],
 
@@ -31,7 +36,6 @@ const questionBank = {
       correct: 0
     }
   ]
-
 };
 
 let questions = [];
@@ -48,18 +52,52 @@ const PENALTY_AMOUNT = 0.5;
 
 /* DOM */
 
-const questionText = document.getElementById("questionText");
-const questionNumber = document.getElementById("questionNumber");
-const answersContainer = document.getElementById("answersContainer");
+const questionText =
+  document.getElementById("questionText");
 
-const scoreEl = document.getElementById("score");
-const penaltiesEl = document.getElementById("penalties");
-const tabSwitchEl = document.getElementById("tabSwitches");
+const questionNumber =
+  document.getElementById("questionNumber");
 
-const gameArea = document.getElementById("gameArea");
-const logArea = document.getElementById("logArea");
+const answersContainer =
+  document.getElementById("answersContainer");
 
-const tabWarning = document.getElementById("tabWarning");
+const scoreEl =
+  document.getElementById("score");
+
+const penaltiesEl =
+  document.getElementById("penalties");
+
+const tabSwitchEl =
+  document.getElementById("tabSwitches");
+
+const gameArea =
+  document.getElementById("gameArea");
+
+const logArea =
+  document.getElementById("logArea");
+
+const tabWarning =
+  document.getElementById("tabWarning");
+
+/* LOG */
+
+function addLog(message) {
+
+  const time =
+    new Date().toLocaleTimeString();
+
+  const entry =
+    document.createElement("div");
+
+  entry.innerHTML =
+    `<strong>[${time}]</strong> ${message}`;
+
+  logArea.prepend(entry);
+
+  while (logArea.children.length > 10) {
+    logArea.removeChild(logArea.lastChild);
+  }
+}
 
 /* HOME */
 
@@ -83,11 +121,14 @@ function startQuizApp() {
     gameMode = selectedMinigame;
   }
 
-  document.getElementById("homeScreen").style.display = "none";
+  document.getElementById("homeScreen")
+    .style.display = "none";
 
-  document.getElementById("quizApp").style.display = "flex";
+  document.getElementById("quizApp")
+    .style.display = "flex";
 
   updateStats();
+
   loadQuestion();
 
   if (gameMode === "cups") {
@@ -101,18 +142,22 @@ function startQuizApp() {
 
 function openQuestionEditor() {
 
-  document.getElementById("homeScreen").style.display = "none";
+  document.getElementById("homeScreen")
+    .style.display = "none";
 
-  document.getElementById("editorScreen").style.display = "block";
+  document.getElementById("editorScreen")
+    .style.display = "block";
 
   renderQuestionEditor();
 }
 
 function closeQuestionEditor() {
 
-  document.getElementById("editorScreen").style.display = "none";
+  document.getElementById("editorScreen")
+    .style.display = "none";
 
-  document.getElementById("homeScreen").style.display = "flex";
+  document.getElementById("homeScreen")
+    .style.display = "flex";
 }
 
 /* QUESTION EDITOR */
@@ -129,9 +174,11 @@ function renderQuestionEditor() {
 
   questionBank[subject].forEach((q, index) => {
 
-    const div = document.createElement("div");
+    const div =
+      document.createElement("div");
 
-    div.className = "question-edit-card";
+    div.className =
+      "question-edit-card";
 
     div.innerHTML = `
 
@@ -163,7 +210,8 @@ function renderQuestionEditor() {
 
 function updateQuestion(subject, index, field, value) {
 
-  questionBank[subject][index][field] = value;
+  questionBank[subject][index][field] =
+    value;
 
   addLog("Question updated.");
 }
@@ -185,10 +233,12 @@ function addNewQuestion() {
     document.getElementById("newQuestionText").value;
 
   const answers = [
+
     document.getElementById("answer1").value,
     document.getElementById("answer2").value,
     document.getElementById("answer3").value,
     document.getElementById("answer4").value
+
   ];
 
   const correct =
@@ -210,31 +260,45 @@ function addNewQuestion() {
 function loadQuestion() {
 
   if (currentQuestion >= questions.length) {
+
     endQuiz();
+
     return;
   }
 
-  const q = questions[currentQuestion];
+  const q =
+    questions[currentQuestion];
 
   questionNumber.textContent =
     `Question ${currentQuestion + 1} / ${questions.length}`;
 
-  questionText.textContent = q.question;
+  questionText.textContent =
+    q.question;
 
   answersContainer.innerHTML = "";
 
   q.answers.forEach((answer, index) => {
 
-    const btn = document.createElement("button");
+    const btn =
+      document.createElement("button");
 
-    btn.className = "answer-btn";
+    btn.className =
+      "answer-btn";
 
-    btn.textContent = answer;
+    btn.textContent =
+      answer;
 
     btn.addEventListener("click", () => {
 
       if (index === q.correct) {
+
         score += 2;
+
+        addLog("Correct answer.");
+
+      } else {
+
+        addLog("Wrong answer.");
       }
 
       updateStats();
@@ -273,42 +337,26 @@ function applyPenalty(reason) {
 
 function endQuiz() {
 
-  document.getElementById("quizContent").style.display = "none";
+  document.getElementById("quizContent")
+    .style.display = "none";
 
-  document.getElementById("resultsScreen").style.display = "block";
+  document.getElementById("resultsScreen")
+    .style.display = "block";
 
-  document.getElementById("finalScore").textContent =
+  document.getElementById("finalScore")
+    .textContent =
     Math.max(score - penalties, 0).toFixed(1);
 
-  document.getElementById("finalFailures").textContent =
-    failures;
+  document.getElementById("finalFailures")
+    .textContent = failures;
 
-  document.getElementById("finalTabs").textContent =
-    tabSwitches;
-}
-
-/* LOG */
-
-function addLog(message) {
-
-  const time = new Date().toLocaleTimeString();
-
-  const entry =
-    document.createElement("div");
-
-  entry.innerHTML =
-    `<strong>[${time}]</strong> ${message}`;
-
-  logArea.prepend(entry);
-
-  while (logArea.children.length > 10) {
-    logArea.removeChild(logArea.lastChild);
-  }
+  document.getElementById("finalTabs")
+    .textContent = tabSwitches;
 }
 
 /* BLOCK COPY */
 
-["copy", "paste", "cut"].forEach(eventName => {
+["copy","paste","cut"].forEach(eventName => {
 
   document.addEventListener(eventName, (e) => {
 
@@ -330,6 +378,8 @@ document.addEventListener("visibilitychange", () => {
 
     tabWarning.style.display = "flex";
 
+    addLog("Tab switch detected.");
+
   } else {
 
     tabWarning.style.display = "none";
@@ -342,11 +392,16 @@ let cupBallIndex = 0;
 
 function startCupGame() {
 
+  document.getElementById("gameTitle")
+    .textContent = "Find The Ball";
+
+  document.getElementById("gameDescription")
+    .textContent =
+    "Track the ball continuously while answering.";
+
   gameArea.innerHTML = `
 
     <div>
-
-      <h2>Find The Ball</h2>
 
       <div class="cups-container"
            id="cupsContainer">
@@ -392,7 +447,8 @@ function shuffleBall() {
 
   ball.className = "ball";
 
-  cups[cupBallIndex].appendChild(ball);
+  cups[cupBallIndex]
+    .appendChild(ball);
 }
 
 function handleCupClick(index) {
@@ -403,7 +459,7 @@ function handleCupClick(index) {
 
   } else {
 
-    applyPenalty("Wrong cup.");
+    applyPenalty("Wrong cup");
   }
 
   shuffleBall();
@@ -415,6 +471,14 @@ let gauge = 100;
 let targetKey = "A";
 
 function startQTEGame() {
+
+  document.getElementById("gameTitle")
+    .textContent =
+    "QTE Pressure Gauge";
+
+  document.getElementById("gameDescription")
+    .textContent =
+    "Press the correct key continuously.";
 
   gameArea.innerHTML = `
 
