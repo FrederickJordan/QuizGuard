@@ -1,30 +1,52 @@
-const questions = [
-  {
-    question: "Which data structure provides FIFO behavior?",
-    answers: ["Stack", "Queue", "Tree", "Graph"],
-    correct: 1
-  },
-  {
-    question: "Which protocol is primarily used for secure web communication?",
-    answers: ["HTTP", "FTP", "SMTP", "HTTPS"],
-    correct: 3
-  },
-  {
-    question: "What is the time complexity of binary search?",
-    answers: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-    correct: 1
-  }
-];
+const questionBank = {
+
+  math: [
+    {
+      question: "What is 12 × 8?",
+      answers: ["96", "88", "108", "84"],
+      correct: 0
+    }
+  ],
+
+  english: [
+    {
+      question: "Choose the synonym of rapid.",
+      answers: ["Slow", "Fast", "Weak", "Calm"],
+      correct: 1
+    }
+  ],
+
+  computer_science: [
+    {
+      question: "Which data structure uses FIFO?",
+      answers: ["Stack", "Queue", "Tree", "Graph"],
+      correct: 1
+    }
+  ],
+
+  science: [
+    {
+      question: "What planet is called the Red Planet?",
+      answers: ["Mars", "Venus", "Mercury", "Saturn"],
+      correct: 0
+    }
+  ]
+
+};
+
+let questions = [];
 
 let currentQuestion = 0;
 let score = 0;
 let penalties = 0;
-let tabSwitches = 0;
 let failures = 0;
+let tabSwitches = 0;
+
+let gameMode = "cups";
 
 const PENALTY_AMOUNT = 0.5;
 
-const gameMode = Math.random() < 0.5 ? "cups" : "qte";
+/* DOM */
 
 const questionText = document.getElementById("questionText");
 const questionNumber = document.getElementById("questionNumber");
@@ -36,20 +58,154 @@ const tabSwitchEl = document.getElementById("tabSwitches");
 
 const gameArea = document.getElementById("gameArea");
 const logArea = document.getElementById("logArea");
+
 const tabWarning = document.getElementById("tabWarning");
 
-function addLog(message) {
-  const time = new Date().toLocaleTimeString();
+/* HOME */
 
-  const entry = document.createElement("div");
-  entry.innerHTML = `<strong>[${time}]</strong> ${message}`;
+function startQuizApp() {
 
-  logArea.prepend(entry);
+  const subject =
+    document.getElementById("subjectSelect").value;
 
-  while (logArea.children.length > 10) {
-    logArea.removeChild(logArea.lastChild);
+  const selectedMinigame =
+    document.getElementById("minigameSelect").value;
+
+  questions = questionBank[subject];
+
+  if (selectedMinigame === "random") {
+
+    gameMode =
+      Math.random() < 0.5 ? "cups" : "qte";
+
+  } else {
+
+    gameMode = selectedMinigame;
   }
+
+  document.getElementById("homeScreen").style.display = "none";
+
+  document.getElementById("quizApp").style.display = "flex";
+
+  updateStats();
+  loadQuestion();
+
+  if (gameMode === "cups") {
+    startCupGame();
+  } else {
+    startQTEGame();
+  }
+
+  addLog("Quiz started.");
 }
+
+function openQuestionEditor() {
+
+  document.getElementById("homeScreen").style.display = "none";
+
+  document.getElementById("editorScreen").style.display = "block";
+
+  renderQuestionEditor();
+}
+
+function closeQuestionEditor() {
+
+  document.getElementById("editorScreen").style.display = "none";
+
+  document.getElementById("homeScreen").style.display = "flex";
+}
+
+/* QUESTION EDITOR */
+
+function renderQuestionEditor() {
+
+  const subject =
+    document.getElementById("editorSubjectSelect").value;
+
+  const container =
+    document.getElementById("questionEditorList");
+
+  container.innerHTML = "";
+
+  questionBank[subject].forEach((q, index) => {
+
+    const div = document.createElement("div");
+
+    div.className = "question-edit-card";
+
+    div.innerHTML = `
+
+      <input type="text"
+             value="${q.question}"
+             onchange="updateQuestion('${subject}', ${index}, 'question', this.value)">
+
+      <input type="text"
+             value="${q.answers[0]}"
+             onchange="updateAnswer('${subject}', ${index}, 0, this.value)">
+
+      <input type="text"
+             value="${q.answers[1]}"
+             onchange="updateAnswer('${subject}', ${index}, 1, this.value)">
+
+      <input type="text"
+             value="${q.answers[2]}"
+             onchange="updateAnswer('${subject}', ${index}, 2, this.value)">
+
+      <input type="text"
+             value="${q.answers[3]}"
+             onchange="updateAnswer('${subject}', ${index}, 3, this.value)">
+
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function updateQuestion(subject, index, field, value) {
+
+  questionBank[subject][index][field] = value;
+
+  addLog("Question updated.");
+}
+
+function updateAnswer(subject, index, answerIndex, value) {
+
+  questionBank[subject][index]
+    .answers[answerIndex] = value;
+
+  addLog("Answer updated.");
+}
+
+function addNewQuestion() {
+
+  const subject =
+    document.getElementById("editorSubjectSelect").value;
+
+  const question =
+    document.getElementById("newQuestionText").value;
+
+  const answers = [
+    document.getElementById("answer1").value,
+    document.getElementById("answer2").value,
+    document.getElementById("answer3").value,
+    document.getElementById("answer4").value
+  ];
+
+  const correct =
+    parseInt(document.getElementById("correctAnswer").value);
+
+  questionBank[subject].push({
+    question,
+    answers,
+    correct
+  });
+
+  renderQuestionEditor();
+
+  addLog("New question added.");
+}
+
+/* QUIZ */
 
 function loadQuestion() {
 
@@ -70,21 +226,21 @@ function loadQuestion() {
   q.answers.forEach((answer, index) => {
 
     const btn = document.createElement("button");
+
     btn.className = "answer-btn";
+
     btn.textContent = answer;
 
     btn.addEventListener("click", () => {
 
       if (index === q.correct) {
         score += 2;
-        addLog("Correct answer selected.");
-      } else {
-        addLog("Wrong answer selected.");
       }
 
       updateStats();
 
       currentQuestion++;
+
       loadQuestion();
     });
 
@@ -93,73 +249,125 @@ function loadQuestion() {
 }
 
 function updateStats() {
-  scoreEl.textContent = Math.max(score - penalties, 0).toFixed(1);
-  penaltiesEl.textContent = penalties.toFixed(1);
-  tabSwitchEl.textContent = tabSwitches;
+
+  scoreEl.textContent =
+    Math.max(score - penalties, 0).toFixed(1);
+
+  penaltiesEl.textContent =
+    penalties.toFixed(1);
+
+  tabSwitchEl.textContent =
+    tabSwitches;
 }
 
 function applyPenalty(reason) {
+
   penalties += PENALTY_AMOUNT;
+
   failures++;
 
   updateStats();
+
   addLog(`Penalty: ${reason}`);
 }
 
 function endQuiz() {
+
   document.getElementById("quizContent").style.display = "none";
+
   document.getElementById("resultsScreen").style.display = "block";
 
   document.getElementById("finalScore").textContent =
     Math.max(score - penalties, 0).toFixed(1);
 
-  document.getElementById("finalFailures").textContent = failures;
-  document.getElementById("finalTabs").textContent = tabSwitches;
-  document.getElementById("finalPenalty").textContent = penalties.toFixed(1);
+  document.getElementById("finalFailures").textContent =
+    failures;
+
+  document.getElementById("finalTabs").textContent =
+    tabSwitches;
 }
 
+/* LOG */
+
+function addLog(message) {
+
+  const time = new Date().toLocaleTimeString();
+
+  const entry =
+    document.createElement("div");
+
+  entry.innerHTML =
+    `<strong>[${time}]</strong> ${message}`;
+
+  logArea.prepend(entry);
+
+  while (logArea.children.length > 10) {
+    logArea.removeChild(logArea.lastChild);
+  }
+}
+
+/* BLOCK COPY */
+
 ["copy", "paste", "cut"].forEach(eventName => {
+
   document.addEventListener(eventName, (e) => {
+
     e.preventDefault();
-    addLog(`${eventName.toUpperCase()} blocked.`);
+
+    addLog(`${eventName} blocked`);
   });
 });
+
+/* TAB SWITCH */
 
 document.addEventListener("visibilitychange", () => {
 
   if (document.hidden) {
+
     tabSwitches++;
+
     updateStats();
 
     tabWarning.style.display = "flex";
 
-    addLog("Tab switch detected.");
   } else {
+
     tabWarning.style.display = "none";
   }
 });
 
-// CUP GAME
+/* CUP GAME */
+
 let cupBallIndex = 0;
-let cupTimeout;
 
 function startCupGame() {
 
   gameArea.innerHTML = `
+
     <div>
-      <h2>Find the Ball</h2>
-      <div class="cups-container" id="cupsContainer"></div>
+
+      <h2>Find The Ball</h2>
+
+      <div class="cups-container"
+           id="cupsContainer">
+      </div>
+
     </div>
+
   `;
 
-  const container = document.getElementById("cupsContainer");
+  const container =
+    document.getElementById("cupsContainer");
 
   for (let i = 0; i < 3; i++) {
 
-    const cup = document.createElement("div");
+    const cup =
+      document.createElement("div");
+
     cup.className = "cup";
 
-    cup.addEventListener("click", () => handleCupClick(i));
+    cup.addEventListener("click",
+      () => handleCupClick(i));
 
     container.appendChild(cup);
   }
@@ -169,78 +377,94 @@ function startCupGame() {
 
 function shuffleBall() {
 
-  const cups = document.querySelectorAll(".cup");
+  const cups =
+    document.querySelectorAll(".cup");
 
   cups.forEach(c => {
     c.innerHTML = "";
   });
 
-  cupBallIndex = Math.floor(Math.random() * 3);
+  cupBallIndex =
+    Math.floor(Math.random() * 3);
 
-  const ball = document.createElement("div");
+  const ball =
+    document.createElement("div");
+
   ball.className = "ball";
 
   cups[cupBallIndex].appendChild(ball);
-
-  clearTimeout(cupTimeout);
-
-  cupTimeout = setTimeout(() => {
-    applyPenalty("Missed cup response");
-    shuffleBall();
-  }, 5000);
 }
 
 function handleCupClick(index) {
 
   if (index === cupBallIndex) {
-    addLog("Cup game success.");
+
+    addLog("Correct cup clicked.");
+
   } else {
-    applyPenalty("Wrong cup selected");
+
+    applyPenalty("Wrong cup.");
   }
 
   shuffleBall();
 }
 
-// QTE GAME
+/* QTE GAME */
+
 let gauge = 100;
 let targetKey = "A";
-let qteLoop;
-let qteSuccessCount = 0;
 
 function startQTEGame() {
 
   gameArea.innerHTML = `
+
     <div class="qte-container">
 
-      <div class="target-key" id="targetKey">A</div>
+      <div class="target-key"
+           id="targetKey">
+      </div>
 
       <div class="gauge-box">
-        <div class="gauge-fill" id="gaugeFill"></div>
+
+        <div class="gauge-fill"
+             id="gaugeFill">
+        </div>
+
       </div>
 
     </div>
   `;
 
   targetKey = randomLetter();
-  document.getElementById("targetKey").textContent = targetKey;
 
-  qteLoop = setInterval(() => {
+  document.getElementById("targetKey")
+    .textContent = targetKey;
 
-    gauge -= 1.2;
+  setInterval(() => {
 
-    document.getElementById("gaugeFill").style.width = gauge + "%";
+    gauge -= 1;
+
+    document.getElementById("gaugeFill")
+      .style.width = gauge + "%";
 
     if (gauge <= 0) {
+
       gauge = 100;
-      applyPenalty("QTE gauge emptied");
+
+      applyPenalty("Gauge emptied");
     }
 
   }, 100);
 }
 
 function randomLetter() {
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  return letters[Math.floor(Math.random() * letters.length)];
+
+  const letters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  return letters[
+    Math.floor(Math.random() * letters.length)
+  ];
 }
 
 document.addEventListener("keydown", (e) => {
@@ -251,26 +475,13 @@ document.addEventListener("keydown", (e) => {
 
     gauge += 10;
 
-    if (gauge > 100) gauge = 100;
-
-    qteSuccessCount++;
-
-    if (qteSuccessCount >= 5) {
-
-      qteSuccessCount = 0;
-
-      targetKey = randomLetter();
-
-      document.getElementById("targetKey").textContent = targetKey;
+    if (gauge > 100) {
+      gauge = 100;
     }
+
+    targetKey = randomLetter();
+
+    document.getElementById("targetKey")
+      .textContent = targetKey;
   }
 });
-
-updateStats();
-loadQuestion();
-
-if (gameMode === "cups") {
-  startCupGame();
-} else {
-  startQTEGame();
-}
