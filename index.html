@@ -1,412 +1,137 @@
-<!-- ========================= -->
-<!-- FULL index.html WITH BACK BUTTON IN QUIZ -->
-<!-- ========================= -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0"/>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>QuizGuard</title>
-
-  <link rel="stylesheet"
-        href="style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<!-- ===================================== -->
-<!-- HOME PAGE -->
-<!-- ===================================== -->
-
-<div id="homeScreen"
-     class="home-screen">
-
+<!-- HOME SCREEN -->
+<div id="homeScreen" class="home-screen">
   <div class="bg-circle circle1"></div>
   <div class="bg-circle circle2"></div>
-
   <div class="home-card">
-
-    <div class="logo-badge">
-      QG
-    </div>
-
-    <h1 class="home-title">
-      QuizGuard
-    </h1>
-
-    <p class="home-subtitle">
-      Gamified Anti-Cheating Quiz Platform
-    </p>
-
+    <div class="logo-badge">QG</div>
+    <h1 class="home-title">QuizGuard</h1>
+    <p class="home-subtitle">Gamified Anti‑Cheating Quiz Platform</p>
     <div class="feature-grid">
-
-      <div class="feature-box">
-        <h3>🎮 Active Minigames</h3>
-        <p>
-          Continuous interaction required while answering questions.
-        </p>
-      </div>
-
-      <div class="feature-box">
-        <h3>🛡 Anti-Cheat</h3>
-        <p>
-          Tab switch detection, penalties, and interaction monitoring.
-        </p>
-      </div>
-
-      <div class="feature-box">
-        <h3>📚 Question Bank</h3>
-        <p>
-          Add, edit, and manage quiz questions by subject and difficulty.
-        </p>
-      </div>
-
-      <div class="feature-box">
-        <h3>⚡ Real-Time Pressure</h3>
-        <p>
-          Students must multitask continuously to avoid penalties.
-        </p>
-      </div>
-
+      <div class="feature-box"><h3>🎮 Active Minigames</h3><p>Continuous interaction required while answering questions.</p></div>
+      <div class="feature-box"><h3>🛡 Anti‑Cheat</h3><p>Tab switch detection, penalties, and interaction monitoring.</p></div>
+      <div class="feature-box"><h3>📚 Question Bank</h3><p>Add, edit, and manage quiz questions by subject and difficulty.</p></div>
+      <div class="feature-box"><h3>⚡ Real‑Time Pressure</h3><p>Students must multitask continuously to avoid penalties.</p></div>
     </div>
-
     <div class="selection-grid">
-
       <div class="menu-section">
-
         <label>Choose Subject</label>
-
-        <select id="subjectSelect"
-                class="menu-select">
-
+        <select id="subjectSelect" class="menu-select">
           <option value="math">Math</option>
           <option value="english">English</option>
-          <option value="computer_science">
-            Computer Science
-          </option>
+          <option value="computer_science">Computer Science</option>
           <option value="science">Science</option>
-
         </select>
-
       </div>
-
       <div class="menu-section">
-
         <label>Select Difficulty</label>
-
-        <select id="difficultySelect"
-                class="menu-select">
-
+        <select id="difficultySelect" class="menu-select">
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
-
         </select>
-
       </div>
-
       <div class="menu-section">
-
         <label>Select Minigame</label>
-
-        <select id="minigameSelect"
-                class="menu-select">
-
-          <option value="random">
-            Random
-          </option>
-
-          <option value="cups">
-            Find The Ball
-          </option>
-
-          <option value="qte">
-            QTE Pressure Gauge
-          </option>
-
+        <select id="minigameSelect" class="menu-select">
+          <option value="random">Random</option>
+          <option value="cups">Find The Ball</option>
+          <option value="qte">QTE Pressure Gauge</option>
         </select>
-
       </div>
-
     </div>
-
     <div class="home-buttons">
-
-      <button class="home-btn start-btn"
-              onclick="startQuizApp()">
-
-        ▶ Start Quiz
-
-      </button>
-
-      <button class="home-btn editor-btn"
-              onclick="openQuestionEditor()">
-
-        ✏ Edit Questions
-
-      </button>
-
+      <button class="home-btn start-btn" onclick="startQuizApp()">▶ Start Quiz</button>
+      <button class="home-btn editor-btn" onclick="openQuestionEditor()">✏ Edit Questions</button>
     </div>
-
   </div>
-
 </div>
 
-<!-- ===================================== -->
-<!-- QUESTION EDITOR -->
-<!-- ===================================== -->
-
-<div id="editorScreen"
-     class="editor-screen"
-     style="display:none;">
-
+<!-- EDITOR SCREEN -->
+<div id="editorScreen" class="editor-screen" style="display:none;">
   <div class="editor-container">
-
     <div class="editor-top">
-
       <h1>Question Bank Editor</h1>
-
-      <button class="back-btn"
-              onclick="closeQuestionEditor()">
-
-        ← Back
-
-      </button>
-
+      <button class="back-btn" onclick="closeQuestionEditor()">← Back</button>
     </div>
-
     <div class="editor-controls">
-
-      <select id="editorSubjectSelect"
-              class="menu-select">
-
+      <select id="editorSubjectSelect" class="menu-select">
         <option value="math">Math</option>
         <option value="english">English</option>
-        <option value="computer_science">
-          Computer Science
-        </option>
+        <option value="computer_science">Computer Science</option>
         <option value="science">Science</option>
-
       </select>
-
-      <select id="editorDifficultySelect"
-              class="menu-select">
-
+      <select id="editorDifficultySelect" class="menu-select">
         <option value="easy">Easy</option>
         <option value="medium">Medium</option>
         <option value="hard">Hard</option>
-
       </select>
-
-      <button class="home-btn start-btn"
-              onclick="renderQuestionEditor()">
-
-        Load Questions
-
-      </button>
-
+      <button class="home-btn start-btn" onclick="renderQuestionEditor()">Load Questions</button>
     </div>
-
     <div id="questionEditorList"></div>
-
     <div class="add-question-box">
-
       <h2>Add New Question</h2>
-
-      <input type="text"
-             id="newQuestionText"
-             placeholder="Question">
-
-      <input type="text"
-             id="answer1"
-             placeholder="Answer 1">
-
-      <input type="text"
-             id="answer2"
-             placeholder="Answer 2">
-
-      <input type="text"
-             id="answer3"
-             placeholder="Answer 3">
-
-      <input type="text"
-             id="answer4"
-             placeholder="Answer 4">
-
-      <input type="number"
-             id="correctAnswer"
-             placeholder="Correct Answer Index (0-3)">
-
-      <button class="home-btn start-btn"
-              onclick="addNewQuestion()">
-
-        Add Question
-
-      </button>
-
+      <input type="text" id="newQuestionText" placeholder="Question">
+      <input type="text" id="answer1" placeholder="Answer 1">
+      <input type="text" id="answer2" placeholder="Answer 2">
+      <input type="text" id="answer3" placeholder="Answer 3">
+      <input type="text" id="answer4" placeholder="Answer 4">
+      <input type="number" id="correctAnswer" placeholder="Correct Answer Index (0-3)">
+      <button class="home-btn start-btn" onclick="addNewQuestion()">Add Question</button>
     </div>
-
   </div>
-
 </div>
 
-<!-- ===================================== -->
-<!-- WARNING -->
-<!-- ===================================== -->
+<!-- TAB WARNING OVERLAY -->
+<div class="flash-warning" id="tabWarning">⚠ TAB SWITCH DETECTED ⚠<br><br>Return to the quiz immediately!</div>
 
-<div class="flash-warning"
-     id="tabWarning">
-
-  ⚠ TAB SWITCH DETECTED ⚠<br><br>
-  Return to the quiz immediately!
-
-</div>
-
-<!-- ===================================== -->
 <!-- QUIZ APPLICATION -->
-<!-- ===================================== -->
-
-<div class="app"
-     id="quizApp"
-     style="display:none;">
-
+<div class="app" id="quizApp" style="display:none;">
   <!-- QUIZ PANEL -->
-
   <div class="panel quiz-panel">
-
     <div class="top-bar">
-
-      <div class="badge">
-        Score:
-        <span id="score">0</span>
-      </div>
-
-      <div class="badge">
-        Penalties:
-        <span id="penalties">0</span>
-      </div>
-
-      <div class="badge warning">
-        Tab Switches:
-        <span id="tabSwitches">0</span>
-      </div>
-
-      <!-- Back button added here -->
-      <button class="back-btn-quiz" id="backToHomeBtn" style="margin-left: auto; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">← Back to Home</button>
-
+      <div class="badge">Score: <span id="score">0</span></div>
+      <div class="badge">Penalties: <span id="penalties">0</span></div>
+      <div class="badge warning">Tab Switches: <span id="tabSwitches">0</span></div>
+      <!-- NO BACK BUTTON HERE DURING ACTIVE QUIZ -->
     </div>
-
-    <div class="question-box"
-         id="quizContent">
-
-      <div class="question-number"
-           id="questionNumber">
-      </div>
-
-      <div class="question"
-           id="questionText">
-      </div>
-
-      <div class="answers"
-           id="answersContainer">
-      </div>
-
+    <div class="question-box" id="quizContent">
+      <div class="question-number" id="questionNumber"></div>
+      <div class="question" id="questionText"></div>
+      <div class="answers" id="answersContainer"></div>
       <div class="anti-cheat-box">
-
         <strong>QuizGuard Anti-Cheat:</strong><br>
-
-        Minigames are always active while
-        answering questions. Ignoring the
-        minigame or switching tabs causes
-        penalties.
-
+        Minigames are always active while answering questions. Ignoring the minigame or switching tabs causes penalties.
       </div>
-
     </div>
-
-    <!-- RESULTS -->
-
-    <div class="results-screen"
-         id="resultsScreen">
-
+    <div class="results-screen" id="resultsScreen">
       <h1>Quiz Complete</h1>
-
       <div class="results-box">
-
-        <div class="result-item">
-          Final Score:
-          <span class="highlight"
-                id="finalScore"></span>
-        </div>
-
-        <div class="result-item">
-          Minigame Failures:
-          <span class="highlight"
-                id="finalFailures"></span>
-        </div>
-
-        <div class="result-item">
-          Tab Switches:
-          <span class="highlight"
-                id="finalTabs"></span>
-        </div>
-
-        <!-- Back button also here -->
-        <button class="home-btn start-btn" id="backFromResultsBtn" style="margin-top: 20px;">Back to Home</button>
-
+        <div class="result-item">Final Score: <span class="highlight" id="finalScore"></span></div>
+        <div class="result-item">Minigame Failures: <span class="highlight" id="finalFailures"></span></div>
+        <div class="result-item">Tab Switches: <span class="highlight" id="finalTabs"></span></div>
+        <button class="home-btn start-btn" onclick="returnToHome()" style="margin-top:20px;">Back to Home</button>
       </div>
-
     </div>
-
   </div>
-
   <!-- GAME PANEL -->
-
   <div class="panel game-panel">
-
-    <div class="game-title"
-         id="gameTitle">
-      Active Minigame
-    </div>
-
-    <div class="game-description"
-         id="gameDescription">
-    </div>
-
-    <div class="game-area"
-         id="gameArea">
-    </div>
-
-    <div class="log-area"
-         id="logArea">
-    </div>
-
+    <div class="game-title" id="gameTitle">Active Minigame</div>
+    <div class="game-description" id="gameDescription"></div>
+    <div class="game-area" id="gameArea"></div>
+    <div class="log-area" id="logArea"></div>
   </div>
-
 </div>
 
 <script src="script.js"></script>
-
-<script>
-  // Attach back button event listeners after DOM loads
-  document.addEventListener('DOMContentLoaded', () => {
-    const backBtn = document.getElementById('backToHomeBtn');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => {
-        if (typeof window.returnToHome === 'function') window.returnToHome();
-      });
-    }
-    const backResultsBtn = document.getElementById('backFromResultsBtn');
-    if (backResultsBtn) {
-      backResultsBtn.addEventListener('click', () => {
-        if (typeof window.returnToHome === 'function') window.returnToHome();
-      });
-    }
-  });
-</script>
-
 </body>
 </html>
