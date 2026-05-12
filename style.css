@@ -199,3 +199,12 @@ body {
   .cup-game-gauge { width: 80%; }
   .qte-container { width: 90%; }
 }
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 42px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  user-select: none;
+}
