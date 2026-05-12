@@ -730,6 +730,16 @@ document.addEventListener('DOMContentLoaded', () => {
       handleRegister(email, password);
     });
   }
+  const togglePassword = document.getElementById('togglePassword');
+if (togglePassword) {
+  togglePassword.addEventListener('click', function() {
+    const passwordInput = document.getElementById('loginPassword');
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    this.textContent = type === 'password' ? '👁️' : '🙈';  // optional: change icon
+  });
+}
+  
   if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
   if (startBtn) startBtn.addEventListener('click', startQuizApp);
   if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
