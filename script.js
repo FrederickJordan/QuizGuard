@@ -241,25 +241,23 @@ async function loadQuestionBankFromFirestore() {
   const userDocRef = doc(db, "users", auth.currentUser.uid);
   const docSnap = await getDoc(userDocRef);
   if (docSnap.exists() && docSnap.data().questionBank) {
-    const saved = docSnap.data().questionBank;
-    const defaultBank = getDefaultQuestionBank();
-    // Ensure all default subjects/difficulties exist (merge structure)
-    for (let subject in defaultBank) {
-      if (!saved[subject]) saved[subject] = {};
-      for (let diff in defaultBank[subject]) {
-        if (!saved[subject][diff]) saved[subject][diff] = [];
-      }
+    let saved = docSnap.data().questionBank;
+    // Ensure each existing subject has easy, medium, hard arrays
+    for (let subject in saved) {
+      if (!saved[subject].easy) saved[subject].easy = [];
+      if (!saved[subject].medium) saved[subject].medium = [];
+      if (!saved[subject].hard) saved[subject].hard = [];
     }
     questionBank = saved;
     addLog("Loaded from cloud.");
   } else {
+    // First time user: save default bank
     questionBank = getDefaultQuestionBank();
     await saveQuestionBankToFirestore();
     addLog("Default bank saved.");
   }
   refreshSubjectDropdowns();
 }
-
 function modifyAndSave(callback) {
   callback();
   saveQuestionBankToFirestore();
@@ -314,17 +312,20 @@ async function editSubject(oldName, newName) {
 
 async function deleteSubject(subject) {
   if (!questionBank[subject]) return;
-  delete questionBank[subject];
-  await saveQuestionBankToFirestore();
-  renderSubjectsList();
-  refreshSubjectDropdowns();
-  const editorSubject = document.getElementById('editorSubjectSelect');
-  if (editorSubject && editorSubject.value === subject) {
-    const firstSubj = Object.keys(questionBank)[0];
-    if (firstSubj) editorSubject.value = firstSubj;
-    renderQuestionEditor();
+  if (confirm(`Delete entire subject "${subject}" and all its questions? This cannot be undone.`)) {
+    delete questionBank[subject];
+    await saveQuestionBankToFirestore();  // ensure it's saved immediately
+    renderSubjectsList();
+    refreshSubjectDropdowns();
+    // If the current editor's subject selector was pointing to removed subject, reset it
+    const editorSubject = document.getElementById('editorSubjectSelect');
+    if (editorSubject && editorSubject.value === subject) {
+      const firstSubj = Object.keys(questionBank)[0];
+      if (firstSubj) editorSubject.value = firstSubj;
+      renderQuestionEditor();
+    }
+    addLog(`Subject "${subject}" deleted and saved.`);
   }
-  addLog(`Subject "${subject}" deleted.`);
 }
 
 async function addNewSubject() {
