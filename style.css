@@ -208,3 +208,22 @@ body {
   font-size: 1.2rem;
   user-select: none;
 }
+
+.subject-pill {
+  background: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.subject-pill button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+.subject-pill button.edit-subject { color: #2563eb; }
+.subject-pill button.delete-subject { color: #dc2626; }
