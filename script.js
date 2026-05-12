@@ -1,4 +1,4 @@
-// ========== FIREBASE CONFIGURATION ==========
+// ========== FIREBASE CONFIGURATION (your existing config) ==========
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -25,12 +25,13 @@ const firebaseConfig = {
   measurementId: "G-YBKTDS05H3"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ========== GLOBAL VARIABLES ==========
-let questionBank = null;         // will be set immediately with default
+let questionBank = null;
 let currentUser = null;
 let questions = [];
 let currentQuestion = 0;
@@ -58,7 +59,7 @@ const WARNING_COOLDOWN_MS = 2000;
 
 function getEl(id) { return document.getElementById(id); }
 
-// ========== DEFAULT QUESTION BANK (10 per difficulty) ==========
+// ========== DEFAULT QUESTION BANK (10 per difficulty, 120 total) ==========
 function getDefaultQuestionBank() {
   return {
     math: {
@@ -216,20 +217,21 @@ function getDefaultQuestionBank() {
   };
 }
 
-// ========== INITIALIZE QUESTION BANK (synchronous) ==========
+// ========== INITIALIZE QUESTION BANK (synchronous fallback) ==========
 function initializeQuestionBank() {
   if (!questionBank) {
     questionBank = getDefaultQuestionBank();
-    console.log("Default question bank initialized");
+    console.log("Default bank ready");
   }
 }
-initializeQuestionBank(); // immediately available
+initializeQuestionBank();
 
-// ========== FIRESTORE SAVE/LOAD ==========
+// ========== FIRESTORE SAVE / LOAD ==========
 async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
   const userDocRef = doc(db, "users", auth.currentUser.uid);
   await setDoc(userDocRef, { questionBank }, { merge: true });
+  console.log("Saved to Firestore");
   addLog("Question bank saved.");
 }
 
@@ -238,12 +240,21 @@ async function loadQuestionBankFromFirestore() {
   const userDocRef = doc(db, "users", auth.currentUser.uid);
   const docSnap = await getDoc(userDocRef);
   if (docSnap.exists() && docSnap.data().questionBank) {
-    questionBank = docSnap.data().questionBank;
+    const saved = docSnap.data().questionBank;
+    const defaultBank = getDefaultQuestionBank();
+    // Ensure all subjects/difficulties exist (merge structure)
+    for (let subject in defaultBank) {
+      if (!saved[subject]) saved[subject] = {};
+      for (let diff in defaultBank[subject]) {
+        if (!saved[subject][diff]) saved[subject][diff] = [];
+      }
+    }
+    questionBank = saved;
     addLog("Loaded from cloud.");
   } else {
-    // no saved data, keep the default (already set)
+    questionBank = getDefaultQuestionBank();
     await saveQuestionBankToFirestore();
-    addLog("Default bank saved to cloud.");
+    addLog("Default bank saved.");
   }
 }
 
@@ -252,7 +263,7 @@ function modifyAndSave(callback) {
   saveQuestionBankToFirestore();
 }
 
-// ========== LOGGING & UI ==========
+// ========== LOGGING & UI HELPERS ==========
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -307,9 +318,9 @@ function updateStats() {
   getEl("tabSwitches").textContent = tabSwitches;
 }
 
-// ========== ANTI-CHEAT ==========
+// ========== ANTI‑CHEAT ==========
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && getEl("quizApp") && getEl("quizApp").style.display === "flex") {
+  if (document.hidden && getEl("quizApp")?.style.display === "flex") {
     tabSwitches++;
     applyPenalty("Tab switched/minimised");
     getEl("tabWarning").style.display = "flex";
@@ -331,7 +342,7 @@ document.addEventListener("visibilitychange", () => {
 // ========== QUIZ CORE ==========
 function startQuizApp() {
   if (!questionBank) {
-    alert("Question bank not ready. Please wait a moment.");
+    alert("Question bank not ready. Please wait.");
     return;
   }
   const subject = getEl("subjectSelect").value;
@@ -345,7 +356,7 @@ function startQuizApp() {
   }
   const qlist = subjectData[difficulty];
   if (!qlist || qlist.length === 0) {
-    alert(`No questions for ${subject} - ${difficulty}. Try adding some in the editor.`);
+    alert(`No questions for ${subject} - ${difficulty}. Try adding some.`);
     return;
   }
   questions = [...qlist];
@@ -423,7 +434,7 @@ function returnToHome() {
 }
 window.returnToHome = returnToHome;
 
-// ========== CUP GAME ==========
+// ========== CUP GAME (gauge to the right, ball moves on reset) ==========
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Click correct cup before gauge empties! Correct refills and moves ball.";
@@ -532,7 +543,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ========== EDITOR FUNCTIONS ==========
+// ========== EDITOR WITH SAVE & DELETE ==========
 function openQuestionEditor() {
   if (!questionBank) {
     alert("Question bank not ready. Please wait.");
@@ -557,52 +568,65 @@ function renderQuestionEditor() {
   container.innerHTML = "";
   const qs = questionBank[subject]?.[difficulty];
   if (!qs || qs.length === 0) {
-    container.innerHTML = "<p>No questions found for this subject/difficulty.</p>";
+    container.innerHTML = "<p>No questions found. Add some below.</p>";
     return;
   }
   qs.forEach((q, idx) => {
     const div = document.createElement("div");
     div.className = "question-edit-card";
+    div.style.marginBottom = "20px";
+    div.style.padding = "15px";
+    div.style.border = "1px solid #ccc";
+    div.style.borderRadius = "12px";
     div.innerHTML = `
-      <input type="text" value="${escapeHtml(q.question)}" data-field="question" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[0])}" data-answer="0" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[1])}" data-answer="1" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[2])}" data-answer="2" data-index="${idx}">
-      <input type="text" value="${escapeHtml(q.answers[3])}" data-answer="3" data-index="${idx}">
-      <input type="number" value="${q.correct}" min="0" max="3" data-correct data-index="${idx}">
+      <input type="text" value="${escapeHtml(q.question)}" class="edit-question-text" style="width:100%; margin-bottom:8px; padding:8px;">
+      <input type="text" value="${escapeHtml(q.answers[0])}" class="edit-answer" data-ans="0" style="width:100%; margin-bottom:4px; padding:8px;">
+      <input type="text" value="${escapeHtml(q.answers[1])}" class="edit-answer" data-ans="1" style="width:100%; margin-bottom:4px; padding:8px;">
+      <input type="text" value="${escapeHtml(q.answers[2])}" class="edit-answer" data-ans="2" style="width:100%; margin-bottom:4px; padding:8px;">
+      <input type="text" value="${escapeHtml(q.answers[3])}" class="edit-answer" data-ans="3" style="width:100%; margin-bottom:8px; padding:8px;">
+      <input type="number" value="${q.correct}" min="0" max="3" class="edit-correct" style="width:100%; margin-bottom:12px; padding:8px;">
+      <div style="display: flex; gap: 10px;">
+        <button class="save-question-btn" data-subject="${subject}" data-difficulty="${difficulty}" data-index="${idx}" style="background: #22c55e; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Save Changes</button>
+        <button class="delete-question-btn" data-subject="${subject}" data-difficulty="${difficulty}" data-index="${idx}" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Delete Question</button>
+      </div>
     `;
     container.appendChild(div);
-  });
-  attachEditorEvents(subject, difficulty);
-}
-function attachEditorEvents(subject, difficulty) {
-  document.querySelectorAll('[data-field]').forEach(inp => {
-    inp.removeEventListener('change', () => {});
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
+    
+    const saveBtn = div.querySelector('.save-question-btn');
+    saveBtn.addEventListener('click', () => {
+      const idx = parseInt(saveBtn.dataset.index);
+      const subject = saveBtn.dataset.subject;
+      const difficulty = saveBtn.dataset.difficulty;
+      const questionText = div.querySelector('.edit-question-text').value;
+      const answers = Array.from(div.querySelectorAll('.edit-answer')).map(inp => inp.value);
+      const correct = parseInt(div.querySelector('.edit-correct').value);
+      if (!questionText || answers.some(a => !a) || isNaN(correct)) {
+        alert("All fields must be filled.");
+        return;
+      }
       modifyAndSave(() => {
-        questionBank[subject][difficulty][idx].question = inp.value;
+        questionBank[subject][difficulty][idx] = {
+          question: questionText,
+          answers: answers,
+          correct: correct
+        };
       });
-      addLog("Question updated");
+      addLog("Question saved.");
+      renderQuestionEditor(); // refresh
     });
-  });
-  document.querySelectorAll('[data-answer]').forEach(inp => {
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
-      const ansIdx = parseInt(inp.dataset.answer);
-      modifyAndSave(() => {
-        questionBank[subject][difficulty][idx].answers[ansIdx] = inp.value;
-      });
-      addLog("Answer updated");
-    });
-  });
-  document.querySelectorAll('[data-correct]').forEach(inp => {
-    inp.addEventListener('change', (e) => {
-      const idx = parseInt(inp.dataset.index);
-      modifyAndSave(() => {
-        questionBank[subject][difficulty][idx].correct = parseInt(inp.value);
-      });
-      addLog("Correct answer index updated");
+    
+    const deleteBtn = div.querySelector('.delete-question-btn');
+    deleteBtn.addEventListener('click', () => {
+      const idx = parseInt(deleteBtn.dataset.index);
+      const subject = deleteBtn.dataset.subject;
+      const difficulty = deleteBtn.dataset.difficulty;
+      if (confirm("Delete this question permanently?")) {
+        modifyAndSave(() => {
+          questionBank[subject][difficulty].splice(idx, 1);
+        });
+        addLog("Question deleted.");
+        renderQuestionEditor();
+      }
     });
   });
 }
@@ -650,14 +674,13 @@ async function handleLogin(email, password) {
   } catch (error) {
     let errorMessage = "Login failed. ";
     if (error.code === 'auth/user-not-found') errorMessage += "No account found with this email.";
-    else if (error.code === 'auth/wrong-password') errorMessage += "Incorrect password. Please try again.";
+    else if (error.code === 'auth/wrong-password') errorMessage += "Incorrect password.";
     else if (error.code === 'auth/invalid-credential') errorMessage += "Invalid email or password.";
     else errorMessage += error.message;
     showAuthMessage(errorMessage, false);
-    console.error("Login error:", error);
+    console.error(error);
   }
 }
-
 async function handleRegister(email, password) {
   if (!email || !password) {
     showAuthMessage("Please enter both email and password.", false);
@@ -669,17 +692,17 @@ async function handleRegister(email, password) {
   }
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    showAuthMessage(`Account created successfully for ${userCredential.user.email}! You are now logged in.`, true);
+    showAuthMessage(`Account created for ${userCredential.user.email}! You are logged in.`, true);
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
     let errorMessage = "Registration failed. ";
-    if (error.code === 'auth/email-already-in-use') errorMessage += "This email is already registered.";
-    else if (error.code === 'auth/invalid-email') errorMessage += "Please enter a valid email address.";
-    else if (error.code === 'auth/weak-password') errorMessage += "Password is too weak. Please use at least 6 characters.";
+    if (error.code === 'auth/email-already-in-use') errorMessage += "Email already registered.";
+    else if (error.code === 'auth/invalid-email') errorMessage += "Invalid email.";
+    else if (error.code === 'auth/weak-password') errorMessage += "Password too weak (min 6 chars).";
     else errorMessage += error.message;
     showAuthMessage(errorMessage, false);
-    console.error("Registration error:", error);
+    console.error(error);
   }
 }
 
@@ -690,21 +713,21 @@ onAuthStateChanged(auth, async (user) => {
     try {
       await loadQuestionBankFromFirestore();
     } catch (err) {
-      console.error("Failed to load question bank", err);
+      console.error("Firestore load error", err);
     }
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     addLog(`Logged in as ${user.email}`);
   } else {
     currentUser = null;
-    questionBank = getDefaultQuestionBank(); // reset to default when logged out
+    questionBank = getDefaultQuestionBank();
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
     addLog("Logged out");
   }
 });
 
-// ========== INITIALIZE UI ==========
+// ========== INITIALIZE UI (after DOM loads) ==========
 document.addEventListener('DOMContentLoaded', () => {
   const loginBtn = getEl("loginBtn");
   const registerBtn = getEl("registerBtn");
@@ -715,31 +738,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadQuestionsBtn = getEl("loadQuestionsBtn");
   const addQuestionBtn = getEl("addQuestionBtn");
   const backToHomeBtn = getEl("backToHomeBtn");
+  const togglePassword = getEl("togglePassword");
 
-  if (loginBtn) {
-    loginBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
-      handleLogin(email, password);
+  if (togglePassword) {
+    togglePassword.addEventListener('click', function() {
+      const pwd = getEl("loginPassword");
+      const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+      pwd.setAttribute('type', type);
+      this.textContent = type === 'password' ? '👁️' : '🙈';
     });
   }
-  if (registerBtn) {
-    registerBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
-      handleRegister(email, password);
-    });
-  }
-  const togglePassword = document.getElementById('togglePassword');
-if (togglePassword) {
-  togglePassword.addEventListener('click', function() {
-    const passwordInput = document.getElementById('loginPassword');
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    this.textContent = type === 'password' ? '👁️' : '🙈';  // optional: change icon
-  });
-}
-  
+  if (loginBtn) loginBtn.addEventListener('click', () => handleLogin(getEl("loginEmail").value, getEl("loginPassword").value));
+  if (registerBtn) registerBtn.addEventListener('click', () => handleRegister(getEl("loginEmail").value, getEl("loginPassword").value));
   if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
   if (startBtn) startBtn.addEventListener('click', startQuizApp);
   if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
