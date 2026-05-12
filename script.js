@@ -741,9 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const addQuestionBtn = getEl("addQuestionBtn");
   const backToHomeBtn = getEl("backToHomeBtn");
   const togglePassword = getEl("togglePassword");
-}
-  
+  const googleSignInBtn = getEl("googleSignInBtn");
 
+  // Password visibility toggle
   if (togglePassword) {
     togglePassword.addEventListener('click', function() {
       const pwd = getEl("loginPassword");
@@ -752,13 +752,63 @@ document.addEventListener('DOMContentLoaded', () => {
       this.textContent = type === 'password' ? '👁️' : '🙈';
     });
   }
-  if (loginBtn) loginBtn.addEventListener('click', () => handleLogin(getEl("loginEmail").value, getEl("loginPassword").value));
-  if (registerBtn) registerBtn.addEventListener('click', () => handleRegister(getEl("loginEmail").value, getEl("loginPassword").value));
+
+  // Email/Password Login
+  if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+      const email = getEl("loginEmail").value;
+      const password = getEl("loginPassword").value;
+      handleLogin(email, password);
+    });
+  }
+
+  // Email/Password Register
+  if (registerBtn) {
+    registerBtn.addEventListener('click', () => {
+      const email = getEl("loginEmail").value;
+      const password = getEl("loginPassword").value;
+      handleRegister(email, password);
+    });
+  }
+
+  // Google Sign‑in (popup)
+  if (googleSignInBtn) {
+    googleSignInBtn.addEventListener('click', async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
+        // The auth state listener will automatically show the main app
+      } catch (error) {
+        console.error("Google sign-in error:", error);
+        let errorMsg = "Google sign-in failed. ";
+        if (error.code === 'auth/popup-blocked') errorMsg += "Pop-up blocked. Please allow pop-ups.";
+        else if (error.code === 'auth/unauthorized-domain') errorMsg += "Domain not authorized. Check Firebase settings.";
+        else errorMsg += error.message;
+        showAuthMessage(errorMsg, false);
+      }
+    });
+  }
+
+  // Logout
   if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
+
+  // Start Quiz
   if (startBtn) startBtn.addEventListener('click', startQuizApp);
+
+  // Open Editor
   if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
+
+  // Close Editor
   if (closeEditorBtn) closeEditorBtn.addEventListener('click', closeQuestionEditor);
+
+  // Load Questions in Editor
   if (loadQuestionsBtn) loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
+
+  // Add New Question
   if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
+
+  // Back to Home (from results screen)
   if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
 });
