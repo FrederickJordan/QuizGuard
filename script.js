@@ -43,6 +43,11 @@ let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
 let pointsPerCorrect = 10;
+let quizActive = false;
+let quizPaused = false;
+let waitingForFullscreen = false;
+let waitingForFocus = false;
+let pendingFailure = false;
 
 // Cup game
 let cupTimerInterval = null;
@@ -400,6 +405,87 @@ function showGaugeWarning(message) {
   }, 1000);
 }
 
+function requestFullscreenMode() {
+  const element = document.documentElement;
+  if (!element.requestFullscreen) return Promise.reject(new Error("Fullscreen unsupported"));
+  return element.requestFullscreen();
+}
+
+function showPauseOverlay(message, showContinueButton = false) {
+  const overlay = getEl('pauseOverlay');
+  const title = getEl('pauseOverlayTitle');
+  const msg = getEl('pauseOverlayMessage');
+  const continueBtn = getEl('pauseOverlayContinue');
+  if (!overlay || !title || !msg || !continueBtn) return;
+  title.textContent = showContinueButton ? 'Fullscreen Required' : 'Quiz Paused';
+  msg.textContent = message;
+  continueBtn.style.display = showContinueButton ? 'inline-flex' : 'none';
+  overlay.style.display = 'flex';
+}
+
+function hidePauseOverlay() {
+  const overlay = getEl('pauseOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'none';
+}
+
+function failCurrentQuestion(reason) {
+  if (currentQuestion >= questions.length) return;
+  failures++;
+  pendingFailure = true;
+  addLog(`Question failed: ${reason}`);
+}
+
+function handleFullscreenExit() {
+  if (!quizActive || waitingForFullscreen || waitingForFocus) return;
+  waitingForFullscreen = true;
+  quizPaused = true;
+  failCurrentQuestion('Fullscreen exited');
+  showPauseOverlay('Fullscreen is required. Click continue to re-enter fullscreen and proceed.', true);
+}
+
+function handleTabSwitch() {
+  if (!quizActive || waitingForFullscreen || waitingForFocus) return;
+  waitingForFocus = true;
+  quizPaused = true;
+  tabSwitches++;
+  failCurrentQuestion('Tab switched away');
+  updateStats();
+  showPauseOverlay('Tab switched away from the quiz. Return to this window to continue.', false);
+}
+
+function resumeAfterVisibilityReturn() {
+  if (!waitingForFocus) return;
+  waitingForFocus = false;
+  hidePauseOverlay();
+  if (!document.fullscreenElement) {
+    waitingForFullscreen = true;
+    showPauseOverlay('You returned to the quiz, but fullscreen is required. Click continue to enter fullscreen and proceed.', true);
+    return;
+  }
+  quizPaused = false;
+  if (pendingFailure) {
+    currentQuestion++;
+    pendingFailure = false;
+  }
+  loadQuestion();
+  addLog('Resumed quiz after returning to tab.');
+}
+
+function resumeAfterFullscreenReturn() {
+  if (!waitingForFullscreen) return;
+  if (!document.fullscreenElement) return;
+  waitingForFullscreen = false;
+  hidePauseOverlay();
+  quizPaused = false;
+  if (pendingFailure) {
+    currentQuestion++;
+    pendingFailure = false;
+  }
+  loadQuestion();
+  addLog('Resumed quiz in fullscreen.');
+}
+
 // ========== PENALTY & STATS ==========
 function applyPenalty(reason) {
   penalties++;
@@ -418,14 +504,20 @@ function updateStats() {
 // ========== ANTI‑CHEAT ==========
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp")?.style.display === "flex") {
-    tabSwitches++;
-    applyPenalty("Tab switched/minimised");
-    getEl("tabWarning").style.display = "flex";
-    setTimeout(() => {
-      if (getEl("tabWarning")) getEl("tabWarning").style.display = "none";
-    }, 2000);
+    handleTabSwitch();
+  } else if (!document.hidden) {
+    resumeAfterVisibilityReturn();
+  }
+});
+
+document.addEventListener("fullscreenchange", () => {
+  if (!quizActive) return;
+  if (!document.fullscreenElement) {
+    if (!waitingForFocus && !waitingForFullscreen && getEl("quizApp")?.style.display === "flex") {
+      handleFullscreenExit();
+    }
   } else {
-    if (getEl("tabWarning")) getEl("tabWarning").style.display = "none";
+    resumeAfterFullscreenReturn();
   }
 });
 
@@ -472,11 +564,20 @@ function startQuizApp() {
   getEl("resultsScreen").style.display = "none";
   getEl("homeScreen").style.display = "none";
   getEl("quizApp").style.display = "flex";
+  quizActive = true;
+  quizPaused = false;
+  waitingForFullscreen = false;
+  waitingForFocus = false;
+  pendingFailure = false;
   updateStats();
   loadQuestion();
 
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
+
+  requestFullscreenMode().catch(err => {
+    addLog(`Fullscreen request failed: ${err.message}`);
+  });
 
   addLog(`Quiz start: ${subject} ${difficulty} (${questions.length} q)`);
 }
@@ -496,6 +597,7 @@ function loadQuestion() {
     btn.className = "answer-btn";
     btn.textContent = ans;
     btn.addEventListener("click", () => {
+      if (quizPaused) return;
       if (idx === q.correct) {
         score += pointsPerCorrect;
         if (score > 100) score = 100;
@@ -514,6 +616,12 @@ function loadQuestion() {
 function endQuiz() {
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
+  quizActive = false;
+  quizPaused = false;
+  waitingForFullscreen = false;
+  waitingForFocus = false;
+  pendingFailure = false;
+  hidePauseOverlay();
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
   getEl("finalScore").textContent = Math.floor(score);
@@ -525,6 +633,12 @@ function endQuiz() {
 function returnToHome() {
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   if (qteInterval) clearInterval(qteInterval);
+  quizActive = false;
+  quizPaused = false;
+  waitingForFullscreen = false;
+  waitingForFocus = false;
+  pendingFailure = false;
+  hidePauseOverlay();
   getEl("quizApp").style.display = "none";
   getEl("homeScreen").style.display = "flex";
   addLog("Returned home.");
@@ -552,7 +666,7 @@ function startCupGame() {
   cupGauge = 100;
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   cupTimerInterval = setInterval(() => {
-    if (getEl("quizApp").style.display !== "flex") return;
+    if (quizPaused || getEl("quizApp").style.display !== "flex") return;
     cupGauge -= CUP_GAUGE_DECREMENT;
     if (cupGauge < 0) cupGauge = 0;
     const fill = getEl("cupGaugeFill");
@@ -579,6 +693,7 @@ function resetCupGameRound() {
 }
 
 function handleCupClick(index) {
+  if (quizPaused) return;
   if (index === cupBallIndex) {
     addLog("Correct cup! Ball moves, gauge refills.");
     resetCupGameRound();
@@ -605,7 +720,7 @@ function startQTEGame() {
   if (fill) fill.style.width = "100%";
   if (qteInterval) clearInterval(qteInterval);
   qteInterval = setInterval(() => {
-    if (getEl("quizApp").style.display !== "flex") return;
+    if (quizPaused || getEl("quizApp").style.display !== "flex") return;
     qteGauge -= 1;
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
@@ -627,6 +742,7 @@ function randomLetter() {
 }
 
 document.addEventListener("keydown", (e) => {
+  if (quizPaused) return;
   if (getEl("quizApp").style.display !== "flex") return;
   if (gameMode !== "qte") return;
   if (e.key.toUpperCase() === targetKey) {
@@ -861,4 +977,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
   if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
   if (addSubjectBtn) addSubjectBtn.addEventListener('click', addNewSubject);
+  const pauseOverlayContinue = getEl('pauseOverlayContinue');
+  if (pauseOverlayContinue) {
+    pauseOverlayContinue.addEventListener('click', () => {
+      requestFullscreenMode().catch(err => {
+        addLog(`Fullscreen request failed: ${err.message}`);
+      });
+    });
+  }
 });
