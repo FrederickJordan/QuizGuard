@@ -1,5 +1,4 @@
-// ========== FIREBASE CONFIGURATION ==========
-// TODO: Replace with your own Firebase project configuration
+// ========== FIREBASE CONFIGURATION (your settings) ==========
 const firebaseConfig = {
   apiKey: "AIzaSyA-aOYS4SxBin4ks17MzX_TVtnxzjPLhD8",
   authDomain: "quizguard-d8c56.firebaseapp.com",
@@ -11,7 +10,7 @@ const firebaseConfig = {
   measurementId: "G-YBKTDS05H3"
 };
 
-// Initialize Firebase (compat version)
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -43,10 +42,10 @@ let targetKey = "A";
 let lastWarningTime = 0;
 const WARNING_COOLDOWN_MS = 2000;
 
-// DOM elements helper
+// Helper
 function getEl(id) { return document.getElementById(id); }
 
-// ========== DEFAULT QUESTION BANK (10 per difficulty) ==========
+// ========== DEFAULT QUESTION BANK (10 per difficulty, same as before) ==========
 function getDefaultQuestionBank() {
   return {
     math: {
@@ -204,56 +203,30 @@ function getDefaultQuestionBank() {
   };
 }
 
-// ========== FIREBASEUI AUTHENTICATION ==========
-function initFirebaseUI() {
-  const uiConfig = {
-    signInOptions: [
-      firebase.auth.EmailAuthProvider.PROVIDER_ID   // only email/password
-    ],
-    callbacks: {
-      signInSuccessWithAuthResult: function(authResult, redirectUrl) {
-        // Successful login – hide auth container, show main app
-        document.getElementById('firebaseui-auth-container').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'block';
-        return false; // prevent automatic redirect
-      }
-    },
-    signInFlow: 'popup',
-    credentialHelper: 'none'
-  };
-  const ui = new firebaseui.auth.AuthUI(auth);
-  ui.start('#firebaseui-auth-container', uiConfig);
-}
-
-// ========== FIRESTORE SAVE / LOAD ==========
+// ========== FIRESTORE SAVE/LOAD ==========
 async function saveQuestionBankToFirestore() {
-  if (!currentUser) return;
-  const userDocRef = db.collection('users').doc(currentUser.uid);
-  await userDocRef.set({ questionBank: questionBank }, { merge: true });
-  addLog("Question bank saved to cloud.");
+  if (!auth.currentUser) return;
+  await db.collection('users').doc(auth.currentUser.uid).set({ questionBank }, { merge: true });
+  addLog("Question bank saved.");
 }
 
 async function loadQuestionBankFromFirestore() {
-  if (!currentUser) return;
-  const userDocRef = db.collection('users').doc(currentUser.uid);
-  const docSnap = await userDocRef.get();
-  if (docSnap.exists && docSnap.data().questionBank) {
-    questionBank = docSnap.data().questionBank;
-    addLog("Question bank loaded from cloud.");
+  if (!auth.currentUser) return;
+  const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+  if (doc.exists && doc.data().questionBank) {
+    questionBank = doc.data().questionBank;
+    addLog("Loaded from cloud.");
   } else {
     questionBank = getDefaultQuestionBank();
     await saveQuestionBankToFirestore();
-    addLog("Default question bank created and saved.");
+    addLog("Default bank created.");
   }
 }
 
-// Auto‑save after any modification to questionBank
-function modifyQuestionBankAndSave(callback) {
+function modifyAndSave(callback) {
   callback();
   saveQuestionBankToFirestore();
 }
-// Expose globally for editor functions
-window.modifyQuestionBankAndSave = modifyQuestionBankAndSave;
 
 // ========== LOGGING ==========
 function addLog(message) {
@@ -291,7 +264,7 @@ function applyPenalty(reason) {
   failures++;
   score = Math.max(0, score - 5);
   updateStats();
-  addLog(`Penalty applied: ${reason} -5 points (now ${Math.floor(score)})`);
+  addLog(`Penalty: ${reason} -5 (now ${Math.floor(score)})`);
 }
 
 function updateStats() {
@@ -300,7 +273,7 @@ function updateStats() {
   getEl("tabSwitches").textContent = tabSwitches;
 }
 
-// ========== TAB SWITCH DETECTION ==========
+// ========== ANTI-CHEAT ==========
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
@@ -314,7 +287,6 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ========== BLOCK COPY/PASTE ==========
 ["copy", "paste", "cut"].forEach(ev => {
   document.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -328,17 +300,16 @@ function startQuizApp() {
   const difficulty = getEl("difficultySelect").value;
   const selected = getEl("minigameSelect").value;
 
-  const subjectData = questionBank[subject];
-  if (!subjectData) {
-    alert("No questions for this subject.");
+  if (!questionBank || !questionBank[subject] || !questionBank[subject][difficulty]) {
+    alert("No questions available. Load editor first?");
     return;
   }
-  const questionList = subjectData[difficulty];
-  if (!questionList || questionList.length === 0) {
-    alert("No questions for this difficulty.");
+  const qlist = questionBank[subject][difficulty];
+  if (!qlist.length) {
+    alert("No questions for this selection.");
     return;
   }
-  questions = [...questionList];
+  questions = [...qlist];
   currentQuestion = 0;
   score = 0;
   penalties = 0;
@@ -360,7 +331,7 @@ function startQuizApp() {
   if (gameMode === "cups") startCupGame();
   else startQTEGame();
 
-  addLog(`Quiz started: ${subject} - ${difficulty} | ${questions.length} questions`);
+  addLog(`Quiz start: ${subject} ${difficulty} (${questions.length} q)`);
 }
 
 function loadQuestion() {
@@ -369,7 +340,7 @@ function loadQuestion() {
     return;
   }
   const q = questions[currentQuestion];
-  getEl("questionNumber").textContent = `Question ${currentQuestion+1} / ${questions.length}`;
+  getEl("questionNumber").textContent = `Q${currentQuestion+1}/${questions.length}`;
   getEl("questionText").textContent = q.question;
   const container = getEl("answersContainer");
   container.innerHTML = "";
@@ -381,9 +352,9 @@ function loadQuestion() {
       if (idx === q.correct) {
         score += pointsPerCorrect;
         if (score > 100) score = 100;
-        addLog(`Correct answer! +${pointsPerCorrect.toFixed(1)} points (now ${Math.floor(score)})`);
+        addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
       } else {
-        addLog("Wrong answer. No points added.");
+        addLog("Wrong answer.");
       }
       updateStats();
       currentQuestion++;
@@ -401,7 +372,7 @@ function endQuiz() {
   getEl("finalScore").textContent = Math.floor(score);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
-  addLog(`Quiz finished. Final score: ${Math.floor(score)}/100`);
+  addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
 function returnToHome() {
@@ -409,14 +380,14 @@ function returnToHome() {
   if (qteInterval) clearInterval(qteInterval);
   getEl("quizApp").style.display = "none";
   getEl("homeScreen").style.display = "flex";
-  addLog("Returned to home screen.");
+  addLog("Returned home.");
 }
 window.returnToHome = returnToHome;
 
-// ========== CUP GAME (gauge to the right, ball moves only on reset) ==========
+// ========== CUP GAME (gauge to the right, ball moves on reset) ==========
 function startCupGame() {
-  getEl("gameTitle").textContent = "Find The Ball (Pressure Gauge)";
-  getEl("gameDescription").textContent = "Click the correct cup before the gauge empties! Correct click refills gauge and moves the ball.";
+  getEl("gameTitle").textContent = "Find The Ball";
+  getEl("gameDescription").textContent = "Click correct cup before gauge empties! Correct refills and moves ball.";
   getEl("gameArea").innerHTML = `
     <div style="display: flex; flex-direction: row; align-items: center; gap: 30px;">
       <div class="cups-container" id="cupsContainer"></div>
@@ -432,18 +403,16 @@ function startCupGame() {
   }
   resetCupGameRound();
   cupGauge = 100;
-  const fill = getEl("cupGaugeFill");
-  if (fill) fill.style.width = "100%";
   if (cupTimerInterval) clearInterval(cupTimerInterval);
   cupTimerInterval = setInterval(() => {
     if (getEl("quizApp").style.display !== "flex") return;
     cupGauge -= CUP_GAUGE_DECREMENT;
     if (cupGauge < 0) cupGauge = 0;
-    const fillEl = getEl("cupGaugeFill");
-    if (fillEl) fillEl.style.width = cupGauge + "%";
-    if (cupGauge <= 20 && cupGauge > 0) showGaugeWarning("⚠️ Cup gauge low! Click correct cup!");
+    const fill = getEl("cupGaugeFill");
+    if (fill) fill.style.width = cupGauge + "%";
+    if (cupGauge <= 20 && cupGauge > 0) showGaugeWarning("⚠️ Cup low! Click cup!");
     if (cupGauge <= 0) {
-      applyPenalty("Cup gauge emptied (no correct click)");
+      applyPenalty("Cup gauge emptied");
       resetCupGameRound();
     }
   }, 100);
@@ -464,10 +433,10 @@ function resetCupGameRound() {
 
 function handleCupClick(index) {
   if (index === cupBallIndex) {
-    addLog("Correct cup clicked – gauge refilled and ball moves.");
+    addLog("Correct cup! Ball moves, gauge refills.");
     resetCupGameRound();
   } else {
-    applyPenalty("Wrong cup selected");
+    applyPenalty("Wrong cup");
     resetCupGameRound();
   }
 }
@@ -475,9 +444,9 @@ function handleCupClick(index) {
 // ========== QTE GAME ==========
 function startQTEGame() {
   getEl("gameTitle").textContent = "QTE Pressure Gauge";
-  getEl("gameDescription").textContent = "Press the correct key to keep the gauge alive!";
+  getEl("gameDescription").textContent = "Press the correct key to keep gauge alive!";
   getEl("gameArea").innerHTML = `
-    <div class="qte-container" style="display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 300px;">
+    <div class="qte-container" style="display: flex; flex-direction: column; align-items: center; width: 300px;">
       <div class="target-key" id="targetKey">A</div>
       <div class="gauge-box" style="width: 100%;"><div class="gauge-fill" id="qteGaugeFill"></div></div>
     </div>
@@ -494,7 +463,7 @@ function startQTEGame() {
     if (qteGauge < 0) qteGauge = 0;
     const fillEl = getEl("qteGaugeFill");
     if (fillEl) fillEl.style.width = qteGauge + "%";
-    if (qteGauge <= 20 && qteGauge > 0) showGaugeWarning("⚠️ QTE gauge low! Press correct key!");
+    if (qteGauge <= 20 && qteGauge > 0) showGaugeWarning("⚠️ QTE low! Press key!");
     if (qteGauge <= 0) {
       applyPenalty("QTE gauge emptied");
       qteGauge = 100;
@@ -520,11 +489,11 @@ document.addEventListener("keydown", (e) => {
     targetKey = randomLetter();
     const targetEl = getEl("targetKey");
     if (targetEl) targetEl.textContent = targetKey;
-    addLog(`Correct key: ${e.key.toUpperCase()} (gauge now ${qteGauge}%)`);
+    addLog(`Correct key: ${e.key.toUpperCase()}`);
   }
 });
 
-// ========== EDITOR FUNCTIONS (with Firestore auto‑save) ==========
+// ========== EDITOR FUNCTIONS (with Firestore) ==========
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -561,7 +530,7 @@ function attachEditorEvents(subject, difficulty) {
     inp.removeEventListener('change', () => {});
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
-      modifyQuestionBankAndSave(() => {
+      modifyAndSave(() => {
         questionBank[subject][difficulty][idx].question = inp.value;
       });
       addLog("Question updated");
@@ -571,7 +540,7 @@ function attachEditorEvents(subject, difficulty) {
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
       const ansIdx = parseInt(inp.dataset.answer);
-      modifyQuestionBankAndSave(() => {
+      modifyAndSave(() => {
         questionBank[subject][difficulty][idx].answers[ansIdx] = inp.value;
       });
       addLog("Answer updated");
@@ -580,7 +549,7 @@ function attachEditorEvents(subject, difficulty) {
   document.querySelectorAll('[data-correct]').forEach(inp => {
     inp.addEventListener('change', (e) => {
       const idx = parseInt(inp.dataset.index);
-      modifyQuestionBankAndSave(() => {
+      modifyAndSave(() => {
         questionBank[subject][difficulty][idx].correct = parseInt(inp.value);
       });
       addLog("Correct answer index updated");
@@ -599,15 +568,11 @@ function addNewQuestion() {
   ];
   const correct = parseInt(getEl("correctAnswer").value);
   if (!qText || answers.some(a => !a) || isNaN(correct)) {
-    alert("Please fill all fields.");
+    alert("Fill all fields.");
     return;
   }
-  modifyQuestionBankAndSave(() => {
-    questionBank[subject][difficulty].push({
-      question: qText,
-      answers: answers,
-      correct: correct
-    });
+  modifyAndSave(() => {
+    questionBank[subject][difficulty].push({ question: qText, answers, correct });
   });
   renderQuestionEditor();
   addLog("New question added.");
@@ -622,32 +587,63 @@ function escapeHtml(str) {
   return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
 }
 
-// ========== AUTH STATE LISTENER ==========
+// ========== AUTH (custom login/register) ==========
+document.addEventListener('DOMContentLoaded', () => {
+  const loginBtn = getEl("loginBtn");
+  const registerBtn = getEl("registerBtn");
+  const logoutBtn = getEl("logoutBtn");
+  const startBtn = getEl("startQuizBtn");
+  const openEditorBtn = getEl("openEditorBtn");
+  const closeEditorBtn = getEl("closeEditorBtn");
+  const loadQuestionsBtn = getEl("loadQuestionsBtn");
+  const addQuestionBtn = getEl("addQuestionBtn");
+  const backToHomeBtn = getEl("backToHomeBtn");
+
+  if (loginBtn) {
+    loginBtn.addEventListener('click', async () => {
+      const email = getEl("loginEmail").value;
+      const password = getEl("loginPassword").value;
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        getEl("authMessage").innerText = "";
+      } catch (err) {
+        getEl("authMessage").innerText = err.message;
+      }
+    });
+  }
+  if (registerBtn) {
+    registerBtn.addEventListener('click', async () => {
+      const email = getEl("loginEmail").value;
+      const password = getEl("loginPassword").value;
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        getEl("authMessage").innerText = "";
+      } catch (err) {
+        getEl("authMessage").innerText = err.message;
+      }
+    });
+  }
+  if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+  if (startBtn) startBtn.addEventListener('click', startQuizApp);
+  if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
+  if (closeEditorBtn) closeEditorBtn.addEventListener('click', closeQuestionEditor);
+  if (loadQuestionsBtn) loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
+  if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
+  if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
+});
+
+// Auth state listener
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUser = user;
     await loadQuestionBankFromFirestore();
-    // Hide auth container and show main app
-    document.getElementById('firebaseui-auth-container').style.display = 'none';
-    document.getElementById('appContainer').style.display = 'block';
+    getEl("authScreen").style.display = "none";
+    getEl("appContainer").style.display = "block";
     addLog(`Logged in as ${user.email}`);
   } else {
     currentUser = null;
-    document.getElementById('firebaseui-auth-container').style.display = 'flex';
-    document.getElementById('appContainer').style.display = 'none';
+    getEl("authScreen").style.display = "flex";
+    getEl("appContainer").style.display = "none";
     addLog("Logged out");
   }
-});
-
-// ========== INITIALIZE UI ==========
-document.addEventListener('DOMContentLoaded', () => {
-  initFirebaseUI();
-  // Attach event listeners for buttons (since we removed inline onclick)
-  getEl("startQuizBtn")?.addEventListener('click', startQuizApp);
-  getEl("openEditorBtn")?.addEventListener('click', openQuestionEditor);
-  getEl("logoutBtn")?.addEventListener('click', () => auth.signOut());
-  getEl("closeEditorBtn")?.addEventListener('click', closeQuestionEditor);
-  getEl("loadQuestionsBtn")?.addEventListener('click', renderQuestionEditor);
-  getEl("addQuestionBtn")?.addEventListener('click', addNewQuestion);
-  getEl("backToHomeBtn")?.addEventListener('click', returnToHome);
 });
