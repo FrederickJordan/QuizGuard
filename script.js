@@ -1,4 +1,4 @@
-// ========== FIREBASE CONFIGURATION ==========
+// ========== FIREBASE CONFIGURATION (your existing config) ==========
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -218,7 +218,7 @@ function getDefaultQuestionBank() {
   };
 }
 
-// ========== FIRESTORE SAVE/LOAD (Preserves added questions) ==========
+// ========== FIRESTORE SAVE/LOAD ==========
 async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
   const userDocRef = doc(db, "users", auth.currentUser.uid);
@@ -258,6 +258,7 @@ function addLog(message) {
 
 function showAuthMessage(message, isSuccess = false) {
   const msgDiv = getEl("authMessage");
+  if (!msgDiv) return;
   msgDiv.textContent = message;
   msgDiv.className = `auth-message ${isSuccess ? 'success' : 'error'}`;
   setTimeout(() => {
@@ -301,7 +302,7 @@ function updateStats() {
 
 // ========== ANTI-CHEAT ==========
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && getEl("quizApp").style.display === "flex") {
+  if (document.hidden && getEl("quizApp") && getEl("quizApp").style.display === "flex") {
     tabSwitches++;
     applyPenalty("Tab switched/minimised");
     getEl("tabWarning").style.display = "flex";
@@ -519,7 +520,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ========== EDITOR FUNCTION ==========
+// ========== EDITOR FUNCTIONS ==========
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -610,14 +611,17 @@ function addNewQuestion() {
   getEl("correctAnswer").value = "";
 }
 function escapeHtml(str) {
-  return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '&gt;': '&gt;' }[m]));
+  return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
 }
 
-// ========== AUTH ==========
+// ========== AUTH HANDLERS ==========
 async function handleLogin(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     showAuthMessage(`Welcome back, ${userCredential.user.email}! Login successful.`, true);
+    // Force show main app (in case onAuthStateChanged is slow)
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
     let errorMessage = "Login failed. ";
     if (error.code === 'auth/user-not-found') errorMessage += "No account found with this email.";
@@ -641,6 +645,9 @@ async function handleRegister(email, password) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     showAuthMessage(`Account created successfully for ${userCredential.user.email}! You are now logged in.`, true);
+    // Force show main app
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
     let errorMessage = "Registration failed. ";
     if (error.code === 'auth/email-already-in-use') errorMessage += "This email is already registered.";
@@ -652,11 +659,16 @@ async function handleRegister(email, password) {
   }
 }
 
-// Auth state listener
+// ========== AUTH STATE LISTENER ==========
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
-    await loadQuestionBankFromFirestore();
+    try {
+      await loadQuestionBankFromFirestore();
+    } catch (err) {
+      console.error("Failed to load question bank", err);
+    }
+    // Ensure visibility
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     addLog(`Logged in as ${user.email}`);
