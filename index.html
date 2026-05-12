@@ -3,28 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QuizGuard – Gamified Anti‑Cheating Quiz</title>
-  <!-- Your existing CSS -->
+  <title>QuizGuard – Login</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDKs (core, auth, firestore) -->
+  <!-- Firebase SDKs (compat for easier integration) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <!-- FirebaseUI (ready‑made login form) -->
-  <script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
-  <!-- Your main script (type="module") -->
-  <script type="module" src="script.js"></script>
+  <script src="script.js" defer></script>
 </head>
 <body>
 
 <!-- ================================ -->
-<!--  AUTH CONTAINER – FirebaseUI will inject the form here -->
+<!-- LOGIN / REGISTER CUSTOM SCREEN   -->
 <!-- ================================ -->
-<div id="firebaseui-auth-container" class="home-screen" style="display: flex; justify-content: center; align-items: center; min-height: 100vh;"></div>
+<div id="authScreen" class="home-screen">
+  <div class="bg-circle circle1"></div>
+  <div class="bg-circle circle2"></div>
+  <div class="home-card" style="max-width: 450px;">
+    <div class="logo-badge">QG</div>
+    <h1 class="home-title">QuizGuard</h1>
+    <p class="home-subtitle">Login or Register</p>
+    <div class="selection-grid">
+      <div class="menu-section">
+        <label>Email</label>
+        <input type="email" id="loginEmail" class="menu-select" placeholder="your@email.com">
+      </div>
+      <div class="menu-section">
+        <label>Password</label>
+        <input type="password" id="loginPassword" class="menu-select" placeholder="password">
+      </div>
+    </div>
+    <div class="home-buttons">
+      <button class="home-btn start-btn" id="loginBtn">Login</button>
+      <button class="home-btn editor-btn" id="registerBtn">Register</button>
+    </div>
+    <div id="authMessage" style="margin-top: 15px; color: #e74c3c; text-align: center;"></div>
+  </div>
+</div>
 
 <!-- ================================ -->
-<!--  MAIN APP (hidden until login)   -->
+<!-- MAIN APP (hidden until login)    -->
 <!-- ================================ -->
 <div id="appContainer" style="display: none;">
 
@@ -77,7 +95,7 @@
     </div>
   </div>
 
-  <!-- QUESTION EDITOR SCREEN -->
+  <!-- EDITOR SCREEN -->
   <div id="editorScreen" class="editor-screen" style="display:none;">
     <div class="editor-container">
       <div class="editor-top">
@@ -112,7 +130,7 @@
     </div>
   </div>
 
-  <!-- QUIZ APPLICATION (active quiz) -->
+  <!-- QUIZ APPLICATION -->
   <div class="app" id="quizApp" style="display:none;">
     <div class="panel quiz-panel">
       <div class="top-bar">
@@ -148,7 +166,7 @@
   </div>
 </div>
 
-<!-- TAB WARNING OVERLAY -->
+<!-- TAB WARNING -->
 <div class="flash-warning" id="tabWarning">⚠ TAB SWITCH DETECTED ⚠<br><br>Return to the quiz immediately!</div>
 
 </body>
