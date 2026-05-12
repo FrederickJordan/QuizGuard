@@ -1,4 +1,4 @@
-// ========== FIREBASE CONFIGURATION (your existing config) ==========
+// ========== FIREBASE CONFIGURATION ==========
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
@@ -25,13 +25,12 @@ const firebaseConfig = {
   measurementId: "G-YBKTDS05H3"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ========== GLOBAL VARIABLES ==========
-let questionBank = null;
+let questionBank = null;         // will be set immediately with default
 let currentUser = null;
 let questions = [];
 let currentQuestion = 0;
@@ -57,7 +56,6 @@ let targetKey = "A";
 let lastWarningTime = 0;
 const WARNING_COOLDOWN_MS = 2000;
 
-// Helper
 function getEl(id) { return document.getElementById(id); }
 
 // ========== DEFAULT QUESTION BANK (10 per difficulty) ==========
@@ -218,6 +216,15 @@ function getDefaultQuestionBank() {
   };
 }
 
+// ========== INITIALIZE QUESTION BANK (synchronous) ==========
+function initializeQuestionBank() {
+  if (!questionBank) {
+    questionBank = getDefaultQuestionBank();
+    console.log("Default question bank initialized");
+  }
+}
+initializeQuestionBank(); // immediately available
+
 // ========== FIRESTORE SAVE/LOAD ==========
 async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
@@ -234,9 +241,9 @@ async function loadQuestionBankFromFirestore() {
     questionBank = docSnap.data().questionBank;
     addLog("Loaded from cloud.");
   } else {
-    questionBank = getDefaultQuestionBank();
+    // no saved data, keep the default (already set)
     await saveQuestionBankToFirestore();
-    addLog("Default bank created.");
+    addLog("Default bank saved to cloud.");
   }
 }
 
@@ -245,7 +252,7 @@ function modifyAndSave(callback) {
   saveQuestionBankToFirestore();
 }
 
-// ========== LOGGING & UI HELPERS ==========
+// ========== LOGGING & UI ==========
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -323,17 +330,22 @@ document.addEventListener("visibilitychange", () => {
 
 // ========== QUIZ CORE ==========
 function startQuizApp() {
+  if (!questionBank) {
+    alert("Question bank not ready. Please wait a moment.");
+    return;
+  }
   const subject = getEl("subjectSelect").value;
   const difficulty = getEl("difficultySelect").value;
   const selected = getEl("minigameSelect").value;
 
-  if (!questionBank || !questionBank[subject] || !questionBank[subject][difficulty]) {
-    alert("No questions available. Load editor first?");
+  const subjectData = questionBank[subject];
+  if (!subjectData) {
+    alert(`No questions for subject: ${subject}`);
     return;
   }
-  const qlist = questionBank[subject][difficulty];
-  if (!qlist.length) {
-    alert("No questions for this selection.");
+  const qlist = subjectData[difficulty];
+  if (!qlist || qlist.length === 0) {
+    alert(`No questions for ${subject} - ${difficulty}. Try adding some in the editor.`);
     return;
   }
   questions = [...qlist];
@@ -522,6 +534,10 @@ document.addEventListener("keydown", (e) => {
 
 // ========== EDITOR FUNCTIONS ==========
 function openQuestionEditor() {
+  if (!questionBank) {
+    alert("Question bank not ready. Please wait.");
+    return;
+  }
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
   renderQuestionEditor();
@@ -531,12 +547,19 @@ function closeQuestionEditor() {
   getEl("homeScreen").style.display = "flex";
 }
 function renderQuestionEditor() {
+  if (!questionBank) {
+    alert("Question bank not loaded yet.");
+    return;
+  }
   const subject = getEl("editorSubjectSelect").value;
   const difficulty = getEl("editorDifficultySelect").value;
   const container = getEl("questionEditorList");
   container.innerHTML = "";
-  const qs = questionBank[subject][difficulty];
-  if (!qs) return;
+  const qs = questionBank[subject]?.[difficulty];
+  if (!qs || qs.length === 0) {
+    container.innerHTML = "<p>No questions found for this subject/difficulty.</p>";
+    return;
+  }
   qs.forEach((q, idx) => {
     const div = document.createElement("div");
     div.className = "question-edit-card";
@@ -584,6 +607,7 @@ function attachEditorEvents(subject, difficulty) {
   });
 }
 function addNewQuestion() {
+  if (!questionBank) return;
   const subject = getEl("editorSubjectSelect").value;
   const difficulty = getEl("editorDifficultySelect").value;
   const qText = getEl("newQuestionText").value;
@@ -599,6 +623,8 @@ function addNewQuestion() {
     return;
   }
   modifyAndSave(() => {
+    if (!questionBank[subject]) questionBank[subject] = {};
+    if (!questionBank[subject][difficulty]) questionBank[subject][difficulty] = [];
     questionBank[subject][difficulty].push({ question: qText, answers, correct });
   });
   renderQuestionEditor();
@@ -619,7 +645,6 @@ async function handleLogin(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     showAuthMessage(`Welcome back, ${userCredential.user.email}! Login successful.`, true);
-    // Force show main app (in case onAuthStateChanged is slow)
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
@@ -645,7 +670,6 @@ async function handleRegister(email, password) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     showAuthMessage(`Account created successfully for ${userCredential.user.email}! You are now logged in.`, true);
-    // Force show main app
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
@@ -668,12 +692,12 @@ onAuthStateChanged(auth, async (user) => {
     } catch (err) {
       console.error("Failed to load question bank", err);
     }
-    // Ensure visibility
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     addLog(`Logged in as ${user.email}`);
   } else {
     currentUser = null;
+    questionBank = getDefaultQuestionBank(); // reset to default when logged out
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appContainer').style.display = 'none';
     addLog("Logged out");
