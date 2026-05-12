@@ -219,7 +219,7 @@ function getDefaultQuestionBank() {
   };
 }
 
-// ========== INITIALIZE QUESTION BANK (synchronous fallback) ==========
+// ========== INITIALIZE QUESTION BANK ==========
 function initializeQuestionBank() {
   if (!questionBank) {
     questionBank = getDefaultQuestionBank();
@@ -233,7 +233,6 @@ async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
   const userDocRef = doc(db, "users", auth.currentUser.uid);
   await setDoc(userDocRef, { questionBank }, { merge: true });
-  console.log("Saved to Firestore");
   addLog("Question bank saved.");
 }
 
@@ -244,7 +243,7 @@ async function loadQuestionBankFromFirestore() {
   if (docSnap.exists() && docSnap.data().questionBank) {
     const saved = docSnap.data().questionBank;
     const defaultBank = getDefaultQuestionBank();
-    // Ensure all subjects/difficulties exist (merge structure)
+    // Ensure all default subjects/difficulties exist (merge structure)
     for (let subject in defaultBank) {
       if (!saved[subject]) saved[subject] = {};
       for (let diff in defaultBank[subject]) {
@@ -258,11 +257,111 @@ async function loadQuestionBankFromFirestore() {
     await saveQuestionBankToFirestore();
     addLog("Default bank saved.");
   }
+  refreshSubjectDropdowns();
 }
 
 function modifyAndSave(callback) {
   callback();
   saveQuestionBankToFirestore();
+}
+
+// ========== SUBJECT MANAGEMENT ==========
+function renderSubjectsList() {
+  const container = document.getElementById('subjectsList');
+  if (!container) return;
+  if (!questionBank) return;
+  const subjects = Object.keys(questionBank);
+  if (subjects.length === 0) {
+    container.innerHTML = '<i>No subjects. Add one above.</i>';
+    return;
+  }
+  container.innerHTML = subjects.map(subj => `
+    <div class="subject-pill">
+      <strong>${escapeHtml(subj)}</strong>
+      <button class="edit-subject" data-subject="${subj}" title="Edit subject name">✏️</button>
+      <button class="delete-subject" data-subject="${subj}" title="Delete subject and all its questions">🗑️</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.edit-subject').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const oldName = btn.dataset.subject;
+      const newName = prompt('Enter new subject name:', oldName);
+      if (newName && newName.trim() && newName !== oldName) {
+        editSubject(oldName, newName.trim());
+      }
+    });
+  });
+  document.querySelectorAll('.delete-subject').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = btn.dataset.subject;
+      if (confirm(`Delete entire subject "${subject}" and all its questions? This cannot be undone.`)) {
+        deleteSubject(subject);
+      }
+    });
+  });
+}
+
+async function editSubject(oldName, newName) {
+  if (!questionBank[oldName]) return;
+  questionBank[newName] = questionBank[oldName];
+  delete questionBank[oldName];
+  await saveQuestionBankToFirestore();
+  renderSubjectsList();
+  refreshSubjectDropdowns();
+  addLog(`Subject "${oldName}" renamed to "${newName}"`);
+}
+
+async function deleteSubject(subject) {
+  if (!questionBank[subject]) return;
+  delete questionBank[subject];
+  await saveQuestionBankToFirestore();
+  renderSubjectsList();
+  refreshSubjectDropdowns();
+  const editorSubject = document.getElementById('editorSubjectSelect');
+  if (editorSubject && editorSubject.value === subject) {
+    const firstSubj = Object.keys(questionBank)[0];
+    if (firstSubj) editorSubject.value = firstSubj;
+    renderQuestionEditor();
+  }
+  addLog(`Subject "${subject}" deleted.`);
+}
+
+async function addNewSubject() {
+  const input = document.getElementById('newSubjectName');
+  const name = input.value.trim();
+  if (!name) {
+    alert('Please enter a subject name.');
+    return;
+  }
+  if (questionBank[name]) {
+    alert('Subject already exists.');
+    return;
+  }
+  questionBank[name] = {
+    easy: [],
+    medium: [],
+    hard: []
+  };
+  await saveQuestionBankToFirestore();
+  input.value = '';
+  renderSubjectsList();
+  refreshSubjectDropdowns();
+  addLog(`New subject "${name}" added.`);
+}
+
+function refreshSubjectDropdowns() {
+  const subjectSelects = ['subjectSelect', 'editorSubjectSelect'];
+  const subjects = Object.keys(questionBank);
+  for (let id of subjectSelects) {
+    const select = document.getElementById(id);
+    if (select) {
+      const currentValue = select.value;
+      select.innerHTML = subjects.map(subj => `<option value="${subj}">${escapeHtml(subj)}</option>`).join('');
+      if (subjects.includes(currentValue)) select.value = currentValue;
+      else if (subjects.length > 0) select.value = subjects[0];
+    }
+  }
 }
 
 // ========== LOGGING & UI HELPERS ==========
@@ -545,14 +644,15 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ========== EDITOR WITH SAVE & DELETE ==========
+// ========== EDITOR FUNCTIONS (questions) ==========
 function openQuestionEditor() {
   if (!questionBank) {
-    alert("Question bank not ready. Please wait.");
+    alert("Question bank not ready.");
     return;
   }
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
+  renderSubjectsList();
   renderQuestionEditor();
 }
 function closeQuestionEditor() {
@@ -614,7 +714,7 @@ function renderQuestionEditor() {
         };
       });
       addLog("Question saved.");
-      renderQuestionEditor(); // refresh
+      renderQuestionEditor();
     });
     
     const deleteBtn = div.querySelector('.delete-question-btn');
@@ -670,41 +770,31 @@ function escapeHtml(str) {
 async function handleLogin(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    showAuthMessage(`Welcome back, ${userCredential.user.email}! Login successful.`, true);
+    showAuthMessage(`Welcome back, ${userCredential.user.email}!`, true);
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
-    let errorMessage = "Login failed. ";
-    if (error.code === 'auth/user-not-found') errorMessage += "No account found with this email.";
-    else if (error.code === 'auth/wrong-password') errorMessage += "Incorrect password.";
-    else if (error.code === 'auth/invalid-credential') errorMessage += "Invalid email or password.";
-    else errorMessage += error.message;
-    showAuthMessage(errorMessage, false);
-    console.error(error);
+    let errorMsg = "Login failed. ";
+    if (error.code === 'auth/user-not-found') errorMsg += "No account found.";
+    else if (error.code === 'auth/wrong-password') errorMsg += "Incorrect password.";
+    else errorMsg += error.message;
+    showAuthMessage(errorMsg, false);
   }
 }
 async function handleRegister(email, password) {
-  if (!email || !password) {
-    showAuthMessage("Please enter both email and password.", false);
-    return;
-  }
-  if (password.length < 6) {
-    showAuthMessage("Password must be at least 6 characters.", false);
-    return;
-  }
+  if (!email || !password) return showAuthMessage("Enter email and password.", false);
+  if (password.length < 6) return showAuthMessage("Password must be ≥6 characters.", false);
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    showAuthMessage(`Account created for ${userCredential.user.email}! You are logged in.`, true);
+    showAuthMessage(`Account created for ${userCredential.user.email}!`, true);
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
   } catch (error) {
-    let errorMessage = "Registration failed. ";
-    if (error.code === 'auth/email-already-in-use') errorMessage += "Email already registered.";
-    else if (error.code === 'auth/invalid-email') errorMessage += "Invalid email.";
-    else if (error.code === 'auth/weak-password') errorMessage += "Password too weak (min 6 chars).";
-    else errorMessage += error.message;
-    showAuthMessage(errorMessage, false);
-    console.error(error);
+    let errorMsg = "Registration failed. ";
+    if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
+    else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email.";
+    else errorMsg += error.message;
+    showAuthMessage(errorMsg, false);
   }
 }
 
@@ -714,9 +804,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     try {
       await loadQuestionBankFromFirestore();
-    } catch (err) {
-      console.error("Firestore load error", err);
-    }
+    } catch (err) { console.error(err); }
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     addLog(`Logged in as ${user.email}`);
@@ -729,7 +817,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ========== INITIALIZE UI (after DOM loads) ==========
+// ========== INITIALIZE UI ==========
 document.addEventListener('DOMContentLoaded', () => {
   const loginBtn = getEl("loginBtn");
   const registerBtn = getEl("registerBtn");
@@ -742,73 +830,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const backToHomeBtn = getEl("backToHomeBtn");
   const togglePassword = getEl("togglePassword");
   const googleSignInBtn = getEl("googleSignInBtn");
+  const addSubjectBtn = getEl("addSubjectBtn");
 
-  // Password visibility toggle
   if (togglePassword) {
-    togglePassword.addEventListener('click', function() {
+    togglePassword.addEventListener('click', () => {
       const pwd = getEl("loginPassword");
       const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
       pwd.setAttribute('type', type);
-      this.textContent = type === 'password' ? '👁️' : '🙈';
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
     });
   }
-
-  // Email/Password Login
-  if (loginBtn) {
-    loginBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
-      handleLogin(email, password);
-    });
-  }
-
-  // Email/Password Register
-  if (registerBtn) {
-    registerBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
-      handleRegister(email, password);
-    });
-  }
-
-  // Google Sign‑in (popup)
+  if (loginBtn) loginBtn.addEventListener('click', () => handleLogin(getEl("loginEmail").value, getEl("loginPassword").value));
+  if (registerBtn) registerBtn.addEventListener('click', () => handleRegister(getEl("loginEmail").value, getEl("loginPassword").value));
   if (googleSignInBtn) {
     googleSignInBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
       try {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
-        // The auth state listener will automatically show the main app
-      } catch (error) {
-        console.error("Google sign-in error:", error);
-        let errorMsg = "Google sign-in failed. ";
-        if (error.code === 'auth/popup-blocked') errorMsg += "Pop-up blocked. Please allow pop-ups.";
-        else if (error.code === 'auth/unauthorized-domain') errorMsg += "Domain not authorized. Check Firebase settings.";
-        else errorMsg += error.message;
-        showAuthMessage(errorMsg, false);
+        showAuthMessage(`Welcome, ${result.user.displayName || result.user.email}!`, true);
+      } catch (err) {
+        let msg = "Google sign-in failed. ";
+        if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked. Allow pop-ups.";
+        else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized in Firebase.";
+        else msg += err.message;
+        showAuthMessage(msg, false);
       }
     });
   }
-
-  // Logout
   if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
-
-  // Start Quiz
   if (startBtn) startBtn.addEventListener('click', startQuizApp);
-
-  // Open Editor
   if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
-
-  // Close Editor
   if (closeEditorBtn) closeEditorBtn.addEventListener('click', closeQuestionEditor);
-
-  // Load Questions in Editor
   if (loadQuestionsBtn) loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
-
-  // Add New Question
   if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
-
-  // Back to Home (from results screen)
   if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
+  if (addSubjectBtn) addSubjectBtn.addEventListener('click', addNewSubject);
 });
