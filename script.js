@@ -1,4 +1,19 @@
-// ========== FIREBASE CONFIGURATION (your settings) ==========
+// ========== FIREBASE CONFIGURATION ==========
+import { initializeApp } from "firebase/app";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "firebase/auth";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc 
+} from "firebase/firestore";
+
 const firebaseConfig = {
   apiKey: "AIzaSyA-aOYS4SxBin4ks17MzX_TVtnxzjPLhD8",
   authDomain: "quizguard-d8c56.firebaseapp.com",
@@ -11,12 +26,12 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // ========== GLOBAL VARIABLES ==========
-let questionBank = null;          // will be loaded from Firestore
+let questionBank = null;
 let currentUser = null;
 let questions = [];
 let currentQuestion = 0;
@@ -45,7 +60,7 @@ const WARNING_COOLDOWN_MS = 2000;
 // Helper
 function getEl(id) { return document.getElementById(id); }
 
-// ========== DEFAULT QUESTION BANK (10 per difficulty, same as before) ==========
+// ========== DEFAULT QUESTION BANK (10 per difficulty) ==========
 function getDefaultQuestionBank() {
   return {
     math: {
@@ -203,18 +218,20 @@ function getDefaultQuestionBank() {
   };
 }
 
-// ========== FIRESTORE SAVE/LOAD ==========
+// ========== FIRESTORE SAVE/LOAD (Preserves added questions) ==========
 async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
-  await db.collection('users').doc(auth.currentUser.uid).set({ questionBank }, { merge: true });
+  const userDocRef = doc(db, "users", auth.currentUser.uid);
+  await setDoc(userDocRef, { questionBank }, { merge: true });
   addLog("Question bank saved.");
 }
 
 async function loadQuestionBankFromFirestore() {
   if (!auth.currentUser) return;
-  const doc = await db.collection('users').doc(auth.currentUser.uid).get();
-  if (doc.exists && doc.data().questionBank) {
-    questionBank = doc.data().questionBank;
+  const userDocRef = doc(db, "users", auth.currentUser.uid);
+  const docSnap = await getDoc(userDocRef);
+  if (docSnap.exists() && docSnap.data().questionBank) {
+    questionBank = docSnap.data().questionBank;
     addLog("Loaded from cloud.");
   } else {
     questionBank = getDefaultQuestionBank();
@@ -228,7 +245,7 @@ function modifyAndSave(callback) {
   saveQuestionBankToFirestore();
 }
 
-// ========== LOGGING ==========
+// ========== LOGGING & UI HELPERS ==========
 function addLog(message) {
   const logArea = getEl("logArea");
   if (!logArea) return;
@@ -239,7 +256,16 @@ function addLog(message) {
   while (logArea.children.length > 10) logArea.removeChild(logArea.lastChild);
 }
 
-// ========== GAUGE WARNING ==========
+function showAuthMessage(message, isSuccess = false) {
+  const msgDiv = getEl("authMessage");
+  msgDiv.textContent = message;
+  msgDiv.className = `auth-message ${isSuccess ? 'success' : 'error'}`;
+  setTimeout(() => {
+    msgDiv.textContent = '';
+    msgDiv.className = 'auth-message';
+  }, 4000);
+}
+
 function showGaugeWarning(message) {
   const now = Date.now();
   if (now - lastWarningTime < WARNING_COOLDOWN_MS) return;
@@ -384,7 +410,7 @@ function returnToHome() {
 }
 window.returnToHome = returnToHome;
 
-// ========== CUP GAME (gauge to the right, ball moves on reset) ==========
+// ========== CUP GAME ==========
 function startCupGame() {
   getEl("gameTitle").textContent = "Find The Ball";
   getEl("gameDescription").textContent = "Click correct cup before gauge empties! Correct refills and moves ball.";
@@ -493,7 +519,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// ========== EDITOR FUNCTIONS (with Firestore) ==========
+// ========== EDITOR FUNCTION ==========
 function openQuestionEditor() {
   getEl("homeScreen").style.display = "none";
   getEl("editorScreen").style.display = "block";
@@ -584,10 +610,65 @@ function addNewQuestion() {
   getEl("correctAnswer").value = "";
 }
 function escapeHtml(str) {
-  return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+  return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '&gt;': '&gt;' }[m]));
 }
 
-// ========== AUTH (custom login/register) ==========
+// ========== AUTH ==========
+async function handleLogin(email, password) {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    showAuthMessage(`Welcome back, ${userCredential.user.email}! Login successful.`, true);
+  } catch (error) {
+    let errorMessage = "Login failed. ";
+    if (error.code === 'auth/user-not-found') errorMessage += "No account found with this email.";
+    else if (error.code === 'auth/wrong-password') errorMessage += "Incorrect password. Please try again.";
+    else if (error.code === 'auth/invalid-credential') errorMessage += "Invalid email or password.";
+    else errorMessage += error.message;
+    showAuthMessage(errorMessage, false);
+    console.error("Login error:", error);
+  }
+}
+
+async function handleRegister(email, password) {
+  if (!email || !password) {
+    showAuthMessage("Please enter both email and password.", false);
+    return;
+  }
+  if (password.length < 6) {
+    showAuthMessage("Password must be at least 6 characters.", false);
+    return;
+  }
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    showAuthMessage(`Account created successfully for ${userCredential.user.email}! You are now logged in.`, true);
+  } catch (error) {
+    let errorMessage = "Registration failed. ";
+    if (error.code === 'auth/email-already-in-use') errorMessage += "This email is already registered.";
+    else if (error.code === 'auth/invalid-email') errorMessage += "Please enter a valid email address.";
+    else if (error.code === 'auth/weak-password') errorMessage += "Password is too weak. Please use at least 6 characters.";
+    else errorMessage += error.message;
+    showAuthMessage(errorMessage, false);
+    console.error("Registration error:", error);
+  }
+}
+
+// Auth state listener
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    await loadQuestionBankFromFirestore();
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
+    addLog(`Logged in as ${user.email}`);
+  } else {
+    currentUser = null;
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appContainer').style.display = 'none';
+    addLog("Logged out");
+  }
+});
+
+// ========== INITIALIZE UI ==========
 document.addEventListener('DOMContentLoaded', () => {
   const loginBtn = getEl("loginBtn");
   const registerBtn = getEl("registerBtn");
@@ -600,50 +681,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const backToHomeBtn = getEl("backToHomeBtn");
 
   if (loginBtn) {
-    loginBtn.addEventListener('click', async () => {
+    loginBtn.addEventListener('click', () => {
       const email = getEl("loginEmail").value;
       const password = getEl("loginPassword").value;
-      try {
-        await auth.signInWithEmailAndPassword(email, password);
-        getEl("authMessage").innerText = "";
-      } catch (err) {
-        getEl("authMessage").innerText = err.message;
-      }
+      handleLogin(email, password);
     });
   }
   if (registerBtn) {
-    registerBtn.addEventListener('click', async () => {
+    registerBtn.addEventListener('click', () => {
       const email = getEl("loginEmail").value;
       const password = getEl("loginPassword").value;
-      try {
-        await auth.createUserWithEmailAndPassword(email, password);
-        getEl("authMessage").innerText = "";
-      } catch (err) {
-        getEl("authMessage").innerText = err.message;
-      }
+      handleRegister(email, password);
     });
   }
-  if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+  if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
   if (startBtn) startBtn.addEventListener('click', startQuizApp);
   if (openEditorBtn) openEditorBtn.addEventListener('click', openQuestionEditor);
   if (closeEditorBtn) closeEditorBtn.addEventListener('click', closeQuestionEditor);
   if (loadQuestionsBtn) loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
   if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
   if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
-});
-
-// Auth state listener
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    currentUser = user;
-    await loadQuestionBankFromFirestore();
-    getEl("authScreen").style.display = "none";
-    getEl("appContainer").style.display = "block";
-    addLog(`Logged in as ${user.email}`);
-  } else {
-    currentUser = null;
-    getEl("authScreen").style.display = "flex";
-    getEl("appContainer").style.display = "none";
-    addLog("Logged out");
-  }
 });
