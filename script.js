@@ -42,13 +42,13 @@ let penalties = 0;
 let failures = 0;
 let tabSwitches = 0;
 let gameMode = "cups";
-let pointsPerCorrect = 20;
+let pointsPerCorrect = 10;
 
 // Cup game
 let cupTimerInterval = null;
 let cupBallIndex = 0;
 let cupGauge = 100;
-const CUP_GAUGE_DECREMENT = 2;
+const CUP_GAUGE_DECREMENT = 1;
 
 // QTE game
 let qteInterval = null;
@@ -64,7 +64,7 @@ function getEl(id) { return document.getElementById(id); }
 // ========== DEFAULT QUESTION BANK (10 per difficulty, 120 total) ==========
 function getDefaultQuestionBank() {
   return {
-    math: {
+    Math: {
       easy: [
         { question: "What is 12 × 8?", answers: ["96", "88", "108", "84"], correct: 0 },
         { question: "What is 15 + 27?", answers: ["42", "32", "52", "41"], correct: 0 },
@@ -102,7 +102,7 @@ function getDefaultQuestionBank() {
         { question: "What is the derivative of sin(x)?", answers: ["cos(x)", "-sin(x)", "sec²(x)", "tan(x)"], correct: 0 }
       ]
     },
-    english: {
+    English: {
       easy: [
         { question: "Choose the synonym of 'rapid'.", answers: ["Fast", "Slow", "Weak", "Calm"], correct: 0 },
         { question: "What is the antonym of 'begin'?", answers: ["End", "Start", "Open", "Launch"], correct: 0 },
@@ -140,7 +140,7 @@ function getDefaultQuestionBank() {
         { question: "What does 'pragmatic' mean?", answers: ["Practical", "Idealistic", "Theoretical", "Emotional"], correct: 0 }
       ]
     },
-    computer_science: {
+    Computer Science: {
       easy: [
         { question: "Which data structure uses FIFO?", answers: ["Queue", "Stack", "Tree", "Graph"], correct: 0 },
         { question: "What does CPU stand for?", answers: ["Central Processing Unit", "Computer Personal Unit", "Central Program Unit", "Core Processing Unit"], correct: 0 },
@@ -178,7 +178,7 @@ function getDefaultQuestionBank() {
         { question: "What is a DDoS attack?", answers: ["Distributed denial-of-service", "Direct data off-system", "Dynamic directory operation system", "Data distribution overload service"], correct: 0 }
       ]
     },
-    science: {
+    Science: {
       easy: [
         { question: "What planet is called the Red Planet?", answers: ["Mars", "Venus", "Mercury", "Saturn"], correct: 0 },
         { question: "What is the hardest natural substance?", answers: ["Diamond", "Gold", "Iron", "Platinum"], correct: 0 },
@@ -467,7 +467,7 @@ function startQuizApp() {
   failures = 0;
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
-  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 20;
+  if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
 
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
   else gameMode = selected;
