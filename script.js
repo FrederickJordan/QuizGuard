@@ -64,7 +64,7 @@ function getEl(id) { return document.getElementById(id); }
 // ========== DEFAULT QUESTION BANK (10 per difficulty, 120 total) ==========
 function getDefaultQuestionBank() {
   return {
-    Math: {
+    math: {
       easy: [
         { question: "What is 12 × 8?", answers: ["96", "88", "108", "84"], correct: 0 },
         { question: "What is 15 + 27?", answers: ["42", "32", "52", "41"], correct: 0 },
@@ -102,7 +102,7 @@ function getDefaultQuestionBank() {
         { question: "What is the derivative of sin(x)?", answers: ["cos(x)", "-sin(x)", "sec²(x)", "tan(x)"], correct: 0 }
       ]
     },
-    English: {
+    english: {
       easy: [
         { question: "Choose the synonym of 'rapid'.", answers: ["Fast", "Slow", "Weak", "Calm"], correct: 0 },
         { question: "What is the antonym of 'begin'?", answers: ["End", "Start", "Open", "Launch"], correct: 0 },
@@ -140,7 +140,7 @@ function getDefaultQuestionBank() {
         { question: "What does 'pragmatic' mean?", answers: ["Practical", "Idealistic", "Theoretical", "Emotional"], correct: 0 }
       ]
     },
-    Computer Science: {
+    computer_science: {
       easy: [
         { question: "Which data structure uses FIFO?", answers: ["Queue", "Stack", "Tree", "Graph"], correct: 0 },
         { question: "What does CPU stand for?", answers: ["Central Processing Unit", "Computer Personal Unit", "Central Program Unit", "Core Processing Unit"], correct: 0 },
@@ -178,7 +178,7 @@ function getDefaultQuestionBank() {
         { question: "What is a DDoS attack?", answers: ["Distributed denial-of-service", "Direct data off-system", "Dynamic directory operation system", "Data distribution overload service"], correct: 0 }
       ]
     },
-    Science: {
+    science: {
       easy: [
         { question: "What planet is called the Red Planet?", answers: ["Mars", "Venus", "Mercury", "Saturn"], correct: 0 },
         { question: "What is the hardest natural substance?", answers: ["Diamond", "Gold", "Iron", "Platinum"], correct: 0 },
