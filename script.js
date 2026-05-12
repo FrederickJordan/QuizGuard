@@ -5,7 +5,9 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   onAuthStateChanged,
-  signOut
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { 
   getFirestore, 
@@ -29,23 +31,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-
-const provider = new GoogleAuthProvider();
-const googleBtn = document.getElementById("googleSignInBtn");
-if (googleBtn) {
-  googleBtn.addEventListener("click", async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log("Google login success:", user.email);
-      // After login, the auth state listener will handle UI transition
-    } catch (error) {
-      console.error("Google login error:", error);
-    }
-  });
-}
 
 // ========== GLOBAL VARIABLES ==========
 let questionBank = null;
@@ -756,6 +741,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const addQuestionBtn = getEl("addQuestionBtn");
   const backToHomeBtn = getEl("backToHomeBtn");
   const togglePassword = getEl("togglePassword");
+  // Get the Google button and add event listener
+const googleSignInBtn = document.getElementById('googleSignInBtn');
+if (googleSignInBtn) {
+  googleSignInBtn.addEventListener('click', async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
+      // The auth state listener will automatically show the main app
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      let errorMsg = "Google sign-in failed. ";
+      if (error.code === 'auth/popup-blocked') errorMsg += "Pop-up was blocked. Please allow pop-ups.";
+      else if (error.code === 'auth/unauthorized-domain') errorMsg += "Domain not authorized. Check Firebase settings.";
+      else errorMsg += error.message;
+      showAuthMessage(errorMsg, false);
+    }
+  });
+}
+  
 
   if (togglePassword) {
     togglePassword.addEventListener('click', function() {
