@@ -1,3 +1,20 @@
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+
+const provider = new GoogleAuthProvider();
+const googleBtn = document.getElementById("googleSignInBtn");
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("Google login success:", user.email);
+      // After login, the auth state listener will handle UI transition
+    } catch (error) {
+      console.error("Google login error:", error);
+    }
+  });
+}
+
 // ========== FIREBASE CONFIGURATION (your existing config) ==========
 import { initializeApp } from "firebase/app";
 import { 
