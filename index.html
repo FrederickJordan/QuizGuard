@@ -3,18 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QuizGuard – Login</title>
+  <title>QuizGuard – Gamified Anti‑Cheating Quiz</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDKs (compat for easier integration) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="script.js" defer></script>
 </head>
 <body>
 
 <!-- ================================ -->
-<!-- LOGIN / REGISTER CUSTOM SCREEN   -->
+<!-- LOGIN / REGISTER SCREEN -->
 <!-- ================================ -->
 <div id="authScreen" class="home-screen">
   <div class="bg-circle circle1"></div>
@@ -22,7 +17,7 @@
   <div class="home-card" style="max-width: 450px;">
     <div class="logo-badge">QG</div>
     <h1 class="home-title">QuizGuard</h1>
-    <p class="home-subtitle">Login or Register</p>
+    <p class="home-subtitle">Login to access your quizzes</p>
     <div class="selection-grid">
       <div class="menu-section">
         <label>Email</label>
@@ -37,16 +32,16 @@
       <button class="home-btn start-btn" id="loginBtn">Login</button>
       <button class="home-btn editor-btn" id="registerBtn">Register</button>
     </div>
-    <div id="authMessage" style="margin-top: 15px; color: #e74c3c; text-align: center;"></div>
+    <div id="authMessage" class="auth-message"></div>
   </div>
 </div>
 
 <!-- ================================ -->
-<!-- MAIN APP (hidden until login)    -->
+<!-- MAIN APP (hidden until login) -->
 <!-- ================================ -->
 <div id="appContainer" style="display: none;">
 
-  <!-- HOME SCREEN (quiz setup) -->
+  <!-- HOME SCREEN -->
   <div id="homeScreen" class="home-screen">
     <div class="bg-circle circle1"></div>
     <div class="bg-circle circle2"></div>
@@ -166,8 +161,39 @@
   </div>
 </div>
 
-<!-- TAB WARNING -->
+<!-- TAB WARNING OVERLAY -->
 <div class="flash-warning" id="tabWarning">⚠ TAB SWITCH DETECTED ⚠<br><br>Return to the quiz immediately!</div>
 
+<style>
+  .auth-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+  }
+  .auth-message.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .auth-message.success {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+</style>
+
+<!-- Firebase SDKs with Import Map -->
+<script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
+    }
+  }
+</script>
+<script type="module" src="script.js"></script>
 </body>
 </html>
