@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>QuizGuard – Gamified Anti‑Cheating Quiz</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Firebase SDKs with import map (modular) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
+      }
+    }
+  </script>
+  <script type="module" src="script.js"></script>
 </head>
 <body>
 
 <!-- ================================ -->
-<!-- LOGIN / REGISTER SCREEN -->
+<!-- LOGIN / REGISTER SCREEN          -->
 <!-- ================================ -->
 <div id="authScreen" class="home-screen">
   <div class="bg-circle circle1"></div>
@@ -23,31 +34,30 @@
         <label>Email</label>
         <input type="email" id="loginEmail" class="menu-select" placeholder="your@email.com">
       </div>
-     <div class="menu-section" style="position: relative;">
-  <label>Password</label>
-  <input type="password" id="loginPassword" class="menu-select" placeholder="password">
-  <span class="password-toggle" id="togglePassword" style="position: absolute; right: 15px; top: 45px; cursor: pointer; user-select: none;">👁️</span>
-</div>
+      <div class="menu-section" style="position: relative;">
+        <label>Password</label>
+        <input type="password" id="loginPassword" class="menu-select" placeholder="password">
+        <span class="password-toggle" id="togglePassword" style="position: absolute; right: 15px; top: 45px; cursor: pointer;">👁️</span>
+      </div>
     </div>
-    <div style="position: relative; text-align: center; margin: 20px 0 10px;">
-  <hr style="border: none; border-top: 1px solid #ddd;">
-  <span style="position: relative; top: -12px; background: white; padding: 0 15px; font-size: 14px; color: #666;">or</span>
-</div>
-
-<button id="googleSignInBtn" class="home-btn editor-btn" style="background: white; color: #444; border: 1px solid #ddd; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 10px 20px; margin: 0 auto; display: flex;">
-  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width: 18px; height: 18px;">
-  Sign in with Google
-</button>
     <div class="home-buttons">
       <button class="home-btn start-btn" id="loginBtn">Login</button>
       <button class="home-btn editor-btn" id="registerBtn">Register</button>
     </div>
+    <div style="position: relative; text-align: center; margin: 20px 0 10px;">
+      <hr style="border: none; border-top: 1px solid #ddd;">
+      <span style="position: relative; top: -12px; background: white; padding: 0 15px; font-size: 14px; color: #666;">or</span>
+    </div>
+    <button id="googleSignInBtn" class="home-btn editor-btn" style="background: white; color: #444; border: 1px solid #ddd; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; padding: 10px 20px; margin: 0 auto; display: flex;">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width: 18px; height: 18px;">
+      Sign in with Google
+    </button>
     <div id="authMessage" class="auth-message"></div>
   </div>
 </div>
 
 <!-- ================================ -->
-<!-- MAIN APP (hidden until login) -->
+<!-- MAIN APP (hidden until login)    -->
 <!-- ================================ -->
 <div id="appContainer" style="display: none;">
 
@@ -67,16 +77,11 @@
       </div>
       <div class="selection-grid">
         <div class="menu-section">
-          <label>Choose Subject</label>
-          <select id="subjectSelect" class="menu-select">
-            <option value="math">Math</option>
-            <option value="english">English</option>
-            <option value="computer_science">Computer Science</option>
-            <option value="science">Science</option>
-          </select>
+          <label>Subject</label>
+          <select id="subjectSelect" class="menu-select"></select>
         </div>
         <div class="menu-section">
-          <label>Select Difficulty</label>
+          <label>Difficulty</label>
           <select id="difficultySelect" class="menu-select">
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
@@ -84,7 +89,7 @@
           </select>
         </div>
         <div class="menu-section">
-          <label>Select Minigame</label>
+          <label>Minigame</label>
           <select id="minigameSelect" class="menu-select">
             <option value="random">Random</option>
             <option value="cups">Find The Ball</option>
@@ -107,13 +112,20 @@
         <h1>Question Bank Editor</h1>
         <button class="back-btn" id="closeEditorBtn">← Back</button>
       </div>
+
+      <!-- Subject Management Section -->
+      <div class="editor-section" style="margin-bottom: 30px; padding: 15px; background: #f0f4f8; border-radius: 16px;">
+        <h3 style="margin-top: 0;">Manage Subjects</h3>
+        <div id="subjectsList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="text" id="newSubjectName" placeholder="New subject name" style="padding: 8px; border-radius: 8px; border: 1px solid #ccc; flex: 1;">
+          <button id="addSubjectBtn" class="home-btn start-btn" style="padding: 8px 16px;">+ Add Subject</button>
+        </div>
+      </div>
+
+      <!-- Question Editor Controls -->
       <div class="editor-controls">
-        <select id="editorSubjectSelect" class="menu-select">
-          <option value="math">Math</option>
-          <option value="english">English</option>
-          <option value="computer_science">Computer Science</option>
-          <option value="science">Science</option>
-        </select>
+        <select id="editorSubjectSelect" class="menu-select"></select>
         <select id="editorDifficultySelect" class="menu-select">
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
@@ -192,18 +204,24 @@
     color: #166534;
     border: 1px solid #bbf7d0;
   }
-</style>
-
-<!-- Firebase SDKs with Import Map -->
-<script type="importmap">
-  {
-    "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
-    }
+  .subject-pill {
+    background: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
   }
-</script>
-<script type="module" src="script.js"></script>
+  .subject-pill button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+  }
+  .subject-pill button.edit-subject { color: #2563eb; }
+  .subject-pill button.delete-subject { color: #dc2626; }
+</style>
 </body>
 </html>
