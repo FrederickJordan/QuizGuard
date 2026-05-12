@@ -232,7 +232,8 @@ initializeQuestionBank();
 async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
   const userDocRef = doc(db, "users", auth.currentUser.uid);
-  await setDoc(userDocRef, { questionBank }, { merge: true });
+  await setDoc(userDocRef, { questionBank }); // remove { merge: true }
+  console.log("Saved to Firestore (overwrite):", questionBank);
   addLog("Question bank saved.");
 }
 
@@ -241,23 +242,18 @@ async function loadQuestionBankFromFirestore() {
   const userDocRef = doc(db, "users", auth.currentUser.uid);
   const docSnap = await getDoc(userDocRef);
   if (docSnap.exists() && docSnap.data().questionBank) {
-    let saved = docSnap.data().questionBank;
-    // Ensure each existing subject has easy, medium, hard arrays
-    for (let subject in saved) {
-      if (!saved[subject].easy) saved[subject].easy = [];
-      if (!saved[subject].medium) saved[subject].medium = [];
-      if (!saved[subject].hard) saved[subject].hard = [];
-    }
-    questionBank = saved;
+    // Use exactly what's saved – no merging with default
+    questionBank = docSnap.data().questionBank;
     addLog("Loaded from cloud.");
   } else {
-    // First time user: save default bank
+    // First time user: create default bank
     questionBank = getDefaultQuestionBank();
     await saveQuestionBankToFirestore();
-    addLog("Default bank saved.");
+    addLog("Default bank created.");
   }
   refreshSubjectDropdowns();
 }
+
 function modifyAndSave(callback) {
   callback();
   saveQuestionBankToFirestore();
@@ -312,20 +308,19 @@ async function editSubject(oldName, newName) {
 
 async function deleteSubject(subject) {
   if (!questionBank[subject]) return;
-  if (confirm(`Delete entire subject "${subject}" and all its questions? This cannot be undone.`)) {
-    delete questionBank[subject];
-    await saveQuestionBankToFirestore();  // ensure it's saved immediately
-    renderSubjectsList();
-    refreshSubjectDropdowns();
-    // If the current editor's subject selector was pointing to removed subject, reset it
-    const editorSubject = document.getElementById('editorSubjectSelect');
-    if (editorSubject && editorSubject.value === subject) {
-      const firstSubj = Object.keys(questionBank)[0];
-      if (firstSubj) editorSubject.value = firstSubj;
-      renderQuestionEditor();
-    }
-    addLog(`Subject "${subject}" deleted and saved.`);
+  if (!confirm(`Delete entire subject "${subject}" and all its questions? This cannot be undone.`)) return;
+  delete questionBank[subject];
+  await saveQuestionBankToFirestore(); // wait for save
+  renderSubjectsList();                // update UI in editor
+  refreshSubjectDropdowns();          // update all dropdowns
+  // If the current editor's subject selector was pointing to removed subject, reset it
+  const editorSubject = document.getElementById('editorSubjectSelect');
+  if (editorSubject && editorSubject.value === subject) {
+    const firstSubj = Object.keys(questionBank)[0];
+    if (firstSubj) editorSubject.value = firstSubj;
+    renderQuestionEditor(); // reload question list for the new subject
   }
+  addLog(`Subject "${subject}" deleted and saved to cloud.`);
 }
 
 async function addNewSubject() {
