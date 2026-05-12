@@ -161,6 +161,44 @@ body {
   font-weight: bold;
 }
 
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.88);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.pause-overlay-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 70px rgba(15, 23, 42, 0.24);
+}
+
+.pause-overlay-card h2 {
+  margin-bottom: 18px;
+  font-size: 30px;
+  color: #111827;
+}
+
+.pause-overlay-card p {
+  margin-bottom: 24px;
+  color: #374151;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+#pauseOverlayContinue {
+  min-width: 180px;
+}
+
 .gauge-warning {
   position: fixed;
   top: 20px;
