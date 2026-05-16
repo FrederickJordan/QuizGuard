@@ -4,7 +4,7 @@ import { signOut, onAuthStateChanged } from "firebase/auth";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
-import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
+import { handleLogin, handleRegister, handleGoogleSignIn } from './auth.js';
 
 // Make questionBank available globally for editor functions
 window.questionBank = questionBank;
