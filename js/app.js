@@ -4,8 +4,12 @@ import { signOut, onAuthStateChanged } from "firebase/auth";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
-import { handleLogin, handleRegister, handleGoogleSignIn } from './auth.js';  // Make sure handleGoogleSignIn is imported
+import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
 
+// Make questionBank available globally for editor functions
+window.questionBank = questionBank;
+
+// Initialize UI after DOM loads
 document.addEventListener('DOMContentLoaded', () => {
   
   // Password toggle
@@ -22,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auth buttons
   getEl("loginBtn")?.addEventListener('click', () => handleLogin(getEl("loginEmail").value, getEl("loginPassword").value));
   getEl("registerBtn")?.addEventListener('click', () => handleRegister(getEl("loginEmail").value, getEl("loginPassword").value));
-  getEl("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);  // <-- ADD HERE
+  getEl("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);
   getEl("logoutBtn")?.addEventListener('click', () => signOut(auth));
 
   // Quiz controls
@@ -44,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   getEl("addQuestionBtn")?.addEventListener('click', addNewQuestion);
   getEl("addSubjectBtn")?.addEventListener('click', addNewSubject);
 
-  // Pause overlay continue
+  // Pause overlay continue button
   getEl("pauseOverlayContinue")?.addEventListener('click', () => {
     document.documentElement.requestFullscreen().catch(err => console.error(err));
   });
