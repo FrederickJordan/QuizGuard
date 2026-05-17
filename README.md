@@ -1,8 +1,10 @@
 QuizGuard/
 │
 ├── index.html
+
 ├── style.css 
 │
+
 └── js/
     ├── app.js
     ├── firebase-config.js
