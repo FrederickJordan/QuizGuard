@@ -1,9 +1,8 @@
 QuizGuard/
-│
+
 ├── index.html
 
 ├── style.css 
-│
 
 └── js/
     ├── app.js
