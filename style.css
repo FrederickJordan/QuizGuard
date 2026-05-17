@@ -152,9 +152,14 @@ body {
   font-size: 18px;
   padding: 15px;
 }
-#submitAnswerBtn:hover {
+#submitAnswerBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(34,197,94,0.3);
+}
+#submitAnswerBtn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 .anti-cheat-box { 
   margin-top: 30px; 
@@ -309,6 +314,12 @@ body {
 
 #pauseOverlayContinue {
   min-width: 180px;
+  display: inline-flex;
+  margin: 0 auto;
+}
+
+.pause-overlay-card {
+  text-align: center;
 }
 
 .gauge-warning {
