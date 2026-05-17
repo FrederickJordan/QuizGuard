@@ -1,7 +1,7 @@
-import { getEl, addLog } from './utils.js';
+import { getEl, addLog, shuffleArray } from './utils.js';
 import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
-import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback } from './anticheat.js';
+import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
 
 let questions = [];
 let currentQuestion = 0;
@@ -12,6 +12,7 @@ let tabSwitches = 0;
 let pointsPerCorrect = 10;
 let quizActive = false;
 let pendingFailure = false;
+let selectedAnswerIndex = null;
 
 export function updateStats() {
   getEl("score").textContent = Math.floor(score);
@@ -52,7 +53,7 @@ export function startQuiz() {
     alert(`No questions for ${subject} - ${difficulty}. Try adding some.`);
     return;
   }
-  questions = [...qlist];
+  questions = shuffleArray(qlist);
   currentQuestion = 0;
   score = 0;
   penalties = 0;
@@ -60,6 +61,7 @@ export function startQuiz() {
   tabSwitches = 0;
   pointsPerCorrect = 100 / questions.length;
   if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
+  resetFullscreenExitAttempts();
 
   let gameMode;
   if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
@@ -75,6 +77,7 @@ export function startQuiz() {
   setQuizActive(true);
   setQuizPaused(false);
   setMinigameQuizPaused(false);
+  setMinigamePauseCallback(setMinigameQuizPaused);
   setApplyPenaltyCallback(applyPenalty);
   setPendingFailureCallback(failCurrentQuestion);
   
@@ -89,34 +92,60 @@ export function startQuiz() {
 }
 
 export function loadQuestion() {
+  if (pendingFailure) {
+    pendingFailure = false;
+    currentQuestion++;
+  }
   if (currentQuestion >= questions.length) {
     endQuiz();
     return;
   }
+  selectedAnswerIndex = null;
   const q = questions[currentQuestion];
   getEl("questionNumber").textContent = `Q${currentQuestion+1}/${questions.length}`;
   getEl("questionText").textContent = q.question;
   const container = getEl("answersContainer");
   container.innerHTML = "";
-  q.answers.forEach((ans, idx) => {
+
+  const answerOptions = shuffleArray(q.answers.map((text, index) => ({ text, index })));
+  const correctIndex = answerOptions.findIndex(option => option.index === q.correct);
+
+  answerOptions.forEach((option, idx) => {
     const btn = document.createElement("button");
     btn.className = "answer-btn";
-    btn.textContent = ans;
+    btn.textContent = option.text;
     btn.addEventListener("click", () => {
       if (getEl("quizApp").style.display !== "flex") return;
-      if (idx === q.correct) {
-        score += pointsPerCorrect;
-        if (score > 100) score = 100;
-        addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
-      } else {
-        addLog("Wrong answer.");
-      }
-      updateStats();
-      currentQuestion++;
-      loadQuestion();
+      // Remove previous selection
+      const prevSelected = container.querySelector(".selected-answer");
+      if (prevSelected) prevSelected.classList.remove("selected-answer");
+      // Mark this answer as selected
+      btn.classList.add("selected-answer");
+      selectedAnswerIndex = idx;
+      // Enable submit button
+      getEl("submitAnswerBtn").disabled = false;
     });
     container.appendChild(btn);
   });
+
+  // Setup submit button
+  const submitBtn = getEl("submitAnswerBtn");
+  submitBtn.disabled = true;
+  submitBtn.onclick = () => {
+    if (selectedAnswerIndex === null) return;
+    
+    if (selectedAnswerIndex === correctIndex) {
+      score += pointsPerCorrect;
+      if (score > 100) score = 100;
+      addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
+    } else {
+      addLog("Wrong answer.");
+    }
+    updateStats();
+    currentQuestion++;
+    loadQuestion();
+  };
+
   window.loadQuestion = loadQuestion;
 }
 
