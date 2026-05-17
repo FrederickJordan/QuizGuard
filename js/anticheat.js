@@ -4,11 +4,21 @@ let waitingForFullscreen = false;
 let waitingForFocus = false;
 let quizActive = false;
 let quizPaused = false;
+let fullscreenExitAttempts = 0;
+let shouldFailOnFullscreenResume = false;
 let pendingFailureCallback = null;
+let minigamePauseCallback = null;
 
 export function setQuizActive(active) { quizActive = active; }
 export function setQuizPaused(paused) { quizPaused = paused; }
 export function setPendingFailureCallback(callback) { pendingFailureCallback = callback; }
+export function setMinigamePauseCallback(callback) { minigamePauseCallback = callback; }
+export function resetFullscreenExitAttempts() {
+  fullscreenExitAttempts = 0;
+  shouldFailOnFullscreenResume = false;
+  waitingForFullscreen = false;
+  waitingForFocus = false;
+}
 
 export function requestFullscreenMode() {
   const element = document.documentElement;
@@ -22,7 +32,7 @@ export function showPauseOverlay(message, showContinueButton = false) {
   const msg = getEl('pauseOverlayMessage');
   const continueBtn = getEl('pauseOverlayContinue');
   if (!overlay || !title || !msg || !continueBtn) return;
-  title.textContent = showContinueButton ? 'Fullscreen Required' : 'Quiz Paused';
+  title.textContent = showContinueButton ? 'Warning!' : 'Quiz Paused';
   msg.textContent = message;
   continueBtn.style.display = showContinueButton ? 'inline-flex' : 'none';
   overlay.style.display = 'flex';
@@ -35,10 +45,19 @@ export function hidePauseOverlay() {
 
 export function handleFullscreenExit() {
   if (!quizActive || waitingForFullscreen || waitingForFocus) return;
+  fullscreenExitAttempts++;
   waitingForFullscreen = true;
+
+  if (fullscreenExitAttempts === 1) {
+    if (minigamePauseCallback) minigamePauseCallback(false);
+    showPauseOverlay('Warning! Fullscreen is required. This is your first exit. Click continue to re-enter fullscreen and proceed.', true);
+    return;
+  }
+
   quizPaused = true;
-  if (pendingFailureCallback) pendingFailureCallback('Fullscreen exited');
-  showPauseOverlay('Fullscreen is required. Click continue to re-enter fullscreen and proceed.', true);
+  if (minigamePauseCallback) minigamePauseCallback(true);
+  shouldFailOnFullscreenResume = true;
+  showPauseOverlay('Warning! Fullscreen exited again. The question will be marked wrong. Click continue to re-enter fullscreen and proceed.', true);
 }
 
 export function handleTabSwitch() {
@@ -74,6 +93,11 @@ export function resumeAfterFullscreenReturn() {
   waitingForFullscreen = false;
   hidePauseOverlay();
   quizPaused = false;
+  if (minigamePauseCallback) minigamePauseCallback(false);
+  if (shouldFailOnFullscreenResume && pendingFailureCallback) {
+    pendingFailureCallback('Fullscreen exited twice');
+    shouldFailOnFullscreenResume = false;
+  }
   if (typeof window.loadQuestion === 'function') window.loadQuestion();
   addLog('Resumed quiz in fullscreen.');
 }
