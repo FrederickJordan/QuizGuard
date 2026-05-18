@@ -13,6 +13,38 @@ let pointsPerCorrect = 10;
 let quizActive = false;
 let pendingFailure = false;
 let selectedAnswerIndex = null;
+let wrongAnswers = [];
+
+function showAiFeedback(text) {
+  const feedbackBox = getEl("aiFeedback");
+  if (!feedbackBox) return;
+  feedbackBox.style.display = "block";
+  feedbackBox.textContent = text;
+}
+
+function clearAiFeedback() {
+  const feedbackBox = getEl("aiFeedback");
+  if (!feedbackBox) return;
+  feedbackBox.style.display = "none";
+  feedbackBox.textContent = "";
+}
+
+async function requestAiFeedback(wrongAnswers) {
+  const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ wrongAnswers })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI endpoint error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.feedback || "AI feedback is unavailable right now.";
+}
 
 export function updateStats() {
   getEl("score").textContent = Math.floor(score);
@@ -59,6 +91,7 @@ export function startQuiz() {
   penalties = 0;
   failures = 0;
   tabSwitches = 0;
+  wrongAnswers = [];
   pointsPerCorrect = 100 / questions.length;
   if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
   resetFullscreenExitAttempts();
@@ -101,6 +134,7 @@ export function loadQuestion() {
     return;
   }
   selectedAnswerIndex = null;
+  clearAiFeedback();
   const q = questions[currentQuestion];
   getEl("questionNumber").textContent = `Q${currentQuestion+1}/${questions.length}`;
   getEl("questionText").textContent = q.question;
@@ -134,12 +168,17 @@ export function loadQuestion() {
   submitBtn.onclick = () => {
     if (selectedAnswerIndex === null) return;
     
-    if (selectedAnswerIndex === correctIndex) {
+        if (selectedAnswerIndex === correctIndex) {
       score += pointsPerCorrect;
       if (score > 100) score = 100;
       addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
     } else {
       addLog("Wrong answer.");
+      wrongAnswers.push({
+        question: q.question,
+        selectedAnswer: answerOptions[selectedAnswerIndex].text,
+        correctAnswer: answerOptions[correctIndex].text
+      });
     }
     updateStats();
     currentQuestion++;
@@ -159,6 +198,16 @@ export function endQuiz() {
   getEl("finalScore").textContent = Math.floor(score);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
+
+  if (wrongAnswers.length > 0) {
+    showAiFeedback("Generating AI feedback for your incorrect answers...");
+    requestAiFeedback(wrongAnswers)
+      .then((text) => showAiFeedback(text))
+      .catch(() => showAiFeedback("Unable to fetch AI feedback right now."));
+  } else {
+    clearAiFeedback();
+  }
+
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
