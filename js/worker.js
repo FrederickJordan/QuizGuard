@@ -31,7 +31,21 @@ export default {
         headers: corsHeaders
       });
     }
-
+    if (!env.HF_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          feedback: "HF_API_KEY is missing in the worker environment.",
+          error: true
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        }
+      );
+    }
     const { wrongAnswers } = payload;
 
     if (!Array.isArray(wrongAnswers) || wrongAnswers.length === 0) {
@@ -55,38 +69,60 @@ ${answersList}
 Respond with a short numbered list, one item per question. Use simple language and be encouraging.
 `;
 
-    const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/google/flan-t5-base",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.HF_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          options: {
-            wait_for_model: true
-          }
-        })
-      }
-    );
-
-    if (!hfResponse.ok) {
-
-      const errorText = await hfResponse.text();
-
-      return new Response(
-        `Hugging Face error: ${hfResponse.status} ${errorText}`,
+    let result;
+    try {
+      const hfResponse = await fetch(
+        "https://api-inference.huggingface.co/models/google/flan-t5-base",
         {
-          status: 502,
-          headers: corsHeaders
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.HF_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            options: {
+              wait_for_model: true
+            }
+          })
+        }
+      );
+
+      if (!hfResponse.ok) {
+        const errorText = await hfResponse.text();
+        return new Response(
+          JSON.stringify({
+            feedback: `AI service returned ${hfResponse.status}.`,
+            error: true,
+            detail: errorText
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders
+            }
+          }
+        );
+      }
+
+      result = await hfResponse.json();
+    } catch (err) {
+      return new Response(
+        JSON.stringify({
+          feedback: "AI service request failed.",
+          error: true,
+          detail: err.message
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
         }
       );
     }
-
-    const result = await hfResponse.json();
-
     const feedback =
       Array.isArray(result) &&
       result[0]?.generated_text
