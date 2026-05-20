@@ -72,7 +72,7 @@ Respond with a short numbered list, one item per question. Use simple language a
     let result;
     try {
       const hfResponse = await fetch(
-        "https://api-inference.huggingface.co/models/google/flan-t5-base",
+        "https://api-inference.huggingface.co/models/gpt2",
         {
           method: "POST",
           headers: {
