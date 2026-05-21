@@ -2,6 +2,8 @@ import { getEl, addLog, shuffleArray } from './utils.js';
 import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
 import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
+import { db, auth } from './firebase-config.js';
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 let questions = [];
 let currentQuestion = 0;
@@ -14,6 +16,9 @@ let quizActive = false;
 let pendingFailure = false;
 let selectedAnswerIndex = null;
 let wrongAnswers = [];
+let currentQuizCode = null;     // if joined via code, store the code for saving results
+let currentQuizSubject = null;
+let currentQuizDifficulty = null;
 
 function showAiFeedback(text) {
   const feedbackBox = getEl("aiFeedbackResults");
@@ -32,16 +37,10 @@ function clearAiFeedback() {
 async function requestAiFeedback(wrongAnswers) {
   const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wrongAnswers })
   });
-
-  if (!response.ok) {
-    throw new Error(`AI endpoint error ${response.status}`);
-  }
-
+  if (!response.ok) throw new Error(`AI endpoint error ${response.status}`);
   const data = await response.json();
   return data.feedback || "AI feedback is unavailable right now.";
 }
@@ -67,22 +66,30 @@ export function failCurrentQuestion(reason) {
   addLog(`Question failed: ${reason}`);
 }
 
-export function startQuiz() {
-  if (!questionBank) {
-    alert("Question bank not ready. Please wait.");
-    return;
-  }
-  const subject = getEl("subjectSelect").value;
-  const difficulty = getEl("difficultySelect").value;
-  const selected = getEl("minigameSelect").value;
-  const subjectData = questionBank[subject];
-  if (!subjectData) {
-    alert(`No questions for subject: ${subject}`);
-    return;
-  }
-  const qlist = subjectData[difficulty];
+async function saveQuizResults() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const aiFeedbackText = getEl("aiFeedbackResults")?.textContent || "";
+  await addDoc(collection(db, "quizResults"), {
+    userId: user.uid,
+    userEmail: user.email,
+    code: currentQuizCode || "manual",
+    subject: currentQuizSubject,
+    difficulty: currentQuizDifficulty,
+    score: Math.floor(score),
+    penalties: penalties,
+    failures: failures,
+    tabSwitches: tabSwitches,
+    wrongAnswers: wrongAnswers,
+    aiFeedback: aiFeedbackText,
+    timestamp: new Date().toISOString()
+  });
+  addLog("Quiz results saved to database.");
+}
+
+function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = null, difficulty = null) {
   if (!qlist || qlist.length === 0) {
-    alert(`No questions for ${subject} - ${difficulty}. Try adding some.`);
+    alert("No questions available.");
     return;
   }
   questions = shuffleArray(qlist);
@@ -92,13 +99,16 @@ export function startQuiz() {
   failures = 0;
   tabSwitches = 0;
   wrongAnswers = [];
+  currentQuizCode = code;
+  currentQuizSubject = subject;
+  currentQuizDifficulty = difficulty;
   pointsPerCorrect = 100 / questions.length;
   if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
   resetFullscreenExitAttempts();
 
   let gameMode;
-  if (selected === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
-  else gameMode = selected;
+  if (selectedMinigame === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
+  else gameMode = selectedMinigame;
 
   getEl("quizContent").style.display = "block";
   getEl("resultsScreen").style.display = "none";
@@ -121,7 +131,43 @@ export function startQuiz() {
 
   requestFullscreenMode().catch(err => addLog(`Fullscreen request failed: ${err.message}`));
   loadQuestion();
-  addLog(`Quiz start: ${subject} ${difficulty} (${questions.length} q)`);
+  addLog(`Quiz started (${questions.length} questions)`);
+}
+
+export function startQuiz() {
+  if (!questionBank) {
+    alert("Question bank not ready. Please wait.");
+    return;
+  }
+  const subject = getEl("subjectSelect").value;
+  const difficulty = getEl("difficultySelect").value;
+  const selected = getEl("minigameSelect").value;
+  const subjectData = questionBank[subject];
+  if (!subjectData) {
+    alert(`No questions for subject: ${subject}`);
+    return;
+  }
+  const qlist = subjectData[difficulty];
+  if (!qlist || qlist.length === 0) {
+    alert(`No questions for ${subject} - ${difficulty}. Try adding some.`);
+    return;
+  }
+  startQuizWithQuestions(qlist, selected, null, subject, difficulty);
+}
+
+export async function joinQuizByCode(code) {
+  const q = query(collection(db, "quizCodes"), where("code", "==", code));
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) {
+    const errorDiv = getEl("joinCodeError");
+    if (errorDiv) errorDiv.innerText = "Invalid code. No quiz found.";
+    return;
+  }
+  const docSnap = snapshot.docs[0];
+  const data = docSnap.data();
+  const selected = getEl("minigameSelect").value;
+  startQuizWithQuestions(data.questions, selected, code, data.subject, data.difficulty);
+  addLog(`Joined quiz via code ${code} (${data.subject} - ${data.difficulty})`);
 }
 
 export function loadQuestion() {
@@ -150,45 +196,42 @@ export function loadQuestion() {
     btn.textContent = option.text;
     btn.addEventListener("click", () => {
       if (getEl("quizApp").style.display !== "flex") return;
-      // Remove previous selection
       const prevSelected = container.querySelector(".selected-answer");
       if (prevSelected) prevSelected.classList.remove("selected-answer");
-      // Mark this answer as selected
       btn.classList.add("selected-answer");
       selectedAnswerIndex = idx;
-      // Enable submit button
-      getEl("submitAnswerBtn").disabled = false;
+      const submitBtn = getEl("submitAnswerBtn");
+      if (submitBtn) submitBtn.disabled = false;
     });
     container.appendChild(btn);
   });
 
-  // Setup submit button
   const submitBtn = getEl("submitAnswerBtn");
-  submitBtn.disabled = true;
-  submitBtn.onclick = () => {
-    if (selectedAnswerIndex === null) return;
-    
-        if (selectedAnswerIndex === correctIndex) {
-      score += pointsPerCorrect;
-      if (score > 100) score = 100;
-      addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
-    } else {
-      addLog("Wrong answer.");
-      wrongAnswers.push({
-        question: q.question,
-        selectedAnswer: answerOptions[selectedAnswerIndex].text,
-        correctAnswer: answerOptions[correctIndex].text
-      });
-    }
-    updateStats();
-    currentQuestion++;
-    loadQuestion();
-  };
-
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.onclick = () => {
+      if (selectedAnswerIndex === null) return;
+      if (selectedAnswerIndex === correctIndex) {
+        score += pointsPerCorrect;
+        if (score > 100) score = 100;
+        addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
+      } else {
+        addLog("Wrong answer.");
+        wrongAnswers.push({
+          question: q.question,
+          selectedAnswer: answerOptions[selectedAnswerIndex].text,
+          correctAnswer: answerOptions[correctIndex].text
+        });
+      }
+      updateStats();
+      currentQuestion++;
+      loadQuestion();
+    };
+  }
   window.loadQuestion = loadQuestion;
 }
 
-export function endQuiz() {
+export async function endQuiz() {
   stopMinigames();
   quizActive = false;
   setQuizActive(false);
@@ -199,15 +242,20 @@ export function endQuiz() {
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
 
+  let aiFeedbackText = "";
   if (wrongAnswers.length > 0) {
     showAiFeedback("Generating AI feedback for your incorrect answers...");
-    requestAiFeedback(wrongAnswers)
-      .then((text) => showAiFeedback(text))
-      .catch(() => showAiFeedback("Unable to fetch AI feedback right now."));
+    try {
+      aiFeedbackText = await requestAiFeedback(wrongAnswers);
+      showAiFeedback(aiFeedbackText);
+    } catch {
+      showAiFeedback("Unable to fetch AI feedback right now.");
+      aiFeedbackText = "AI feedback unavailable.";
+    }
   } else {
     clearAiFeedback();
   }
-
+  await saveQuizResults();
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
