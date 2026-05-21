@@ -1,7 +1,7 @@
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore';
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -9,7 +9,6 @@ import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from
 
 const db = getFirestore();
 let currentUserRole = null;
-let currentUserId = null;
 
 window.questionBank = questionBank;
 
@@ -63,92 +62,87 @@ async function showStudentHistory() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Password toggle
-  const toggle = getEl("togglePassword");
-  if (toggle) {
-    toggle.addEventListener('click', () => {
+  console.log("DOM fully loaded – app.js running");
+
+  // Get all elements
+  const loginBtn = getEl("loginBtn");
+  const registerBtn = getEl("registerBtn");
+  const googleBtn = getEl("googleSignInBtn");
+  const logoutBtn = getEl("logoutBtn");
+  const startQuizBtn = getEl("startQuizBtn");
+  const backToHomeBtn = getEl("backToHomeBtn");
+  const joinQuizBtn = getEl("joinQuizBtn");
+  const teacherDashboardBtn = getEl("teacherDashboardBtn");
+  const studentHistoryBtn = getEl("studentHistoryBtn");
+  const openEditorBtn = getEl("openEditorBtn");
+  const closeEditorBtn = getEl("closeEditorBtn");
+  const loadQuestionsBtn = getEl("loadQuestionsBtn");
+  const addQuestionBtn = getEl("addQuestionBtn");
+  const addSubjectBtn = getEl("addSubjectBtn");
+  const pauseOverlayContinue = getEl("pauseOverlayContinue");
+  const togglePassword = getEl("togglePassword");
+
+  console.log("Elements found:", {
+    loginBtn: !!loginBtn,
+    registerBtn: !!registerBtn,
+    googleBtn: !!googleBtn
+  });
+
+  if (togglePassword) {
+    togglePassword.addEventListener('click', () => {
       const pwd = getEl("loginPassword");
-      const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
-      pwd.setAttribute('type', type);
-      toggle.textContent = type === 'password' ? '👁️' : '🙈';
+      if (pwd) {
+        const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+        pwd.setAttribute('type', type);
+        togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+      }
     });
   }
 
-  // Login button
-  const loginBtn = getEl("loginBtn");
   if (loginBtn) {
     loginBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
+      const email = getEl("loginEmail")?.value || "";
+      const password = getEl("loginPassword")?.value || "";
+      console.log("Login clicked", email);
       handleLogin(email, password);
     });
-  }
+  } else console.error("loginBtn missing");
 
-  // Register button
-  const registerBtn = getEl("registerBtn");
   if (registerBtn) {
     registerBtn.addEventListener('click', () => {
-      const email = getEl("loginEmail").value;
-      const password = getEl("loginPassword").value;
+      const email = getEl("loginEmail")?.value || "";
+      const password = getEl("loginPassword")?.value || "";
       const roleSelect = getEl("registerRole");
       const role = roleSelect ? roleSelect.value : "student";
+      console.log("Register clicked", email, role);
       handleRegister(email, password, role);
     });
-  }
+  } else console.error("registerBtn missing");
 
-  // Google sign-in
-  const googleBtn = getEl("googleSignInBtn");
   if (googleBtn) {
-    googleBtn.addEventListener('click', handleGoogleSignIn);
-  }
+    googleBtn.addEventListener('click', () => {
+      console.log("Google sign-in clicked");
+      handleGoogleSignIn();
+    });
+  } else console.error("googleBtn missing");
 
-  // Logout
-  const logoutBtn = getEl("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => signOut(auth));
-  }
-
-  // Start quiz
-  const startQuizBtn = getEl("startQuizBtn");
-  if (startQuizBtn) {
-    startQuizBtn.addEventListener('click', startQuiz);
-  }
-
-  // Back to home
-  const backToHomeBtn = getEl("backToHomeBtn");
-  if (backToHomeBtn) {
-    backToHomeBtn.addEventListener('click', returnToHome);
-  }
-
-  // Join quiz by code
-  const joinQuizBtn = getEl("joinQuizBtn");
+  if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
+  if (startQuizBtn) startQuizBtn.addEventListener('click', startQuiz);
+  if (backToHomeBtn) backToHomeBtn.addEventListener('click', returnToHome);
   if (joinQuizBtn) {
     joinQuizBtn.addEventListener('click', async () => {
-      const code = getEl("joinCodeInput").value.trim();
-      const errorDiv = getEl("joinCodeError");
+      const code = getEl("joinCodeInput")?.value.trim();
+      const errDiv = getEl("joinCodeError");
       if (!code || code.length !== 6) {
-        if (errorDiv) errorDiv.innerText = "Please enter a valid 6-digit code.";
+        if (errDiv) errDiv.innerText = "Enter 6-digit code";
         return;
       }
-      if (errorDiv) errorDiv.innerText = "";
+      if (errDiv) errDiv.innerText = "";
       await joinQuizByCode(code);
     });
   }
-
-  // Teacher dashboard
-  const teacherDashboardBtn = getEl("teacherDashboardBtn");
-  if (teacherDashboardBtn) {
-    teacherDashboardBtn.addEventListener('click', showTeacherDashboard);
-  }
-
-  // Student history
-  const studentHistoryBtn = getEl("studentHistoryBtn");
-  if (studentHistoryBtn) {
-    studentHistoryBtn.addEventListener('click', showStudentHistory);
-  }
-
-  // Open editor (teacher only)
-  const openEditorBtn = getEl("openEditorBtn");
+  if (teacherDashboardBtn) teacherDashboardBtn.addEventListener('click', showTeacherDashboard);
+  if (studentHistoryBtn) studentHistoryBtn.addEventListener('click', showStudentHistory);
   if (openEditorBtn) {
     openEditorBtn.addEventListener('click', () => {
       if (currentUserRole !== "teacher") {
@@ -161,30 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
       getEl("editorScreen").style.display = "block";
     });
   }
-
-  // Close editor
-  const closeEditorBtn = getEl("closeEditorBtn");
   if (closeEditorBtn) {
     closeEditorBtn.addEventListener('click', () => {
       getEl("editorScreen").style.display = "none";
       getEl("homeScreen").style.display = "flex";
     });
   }
-
-  // Load questions in editor
-  const loadQuestionsBtn = getEl("loadQuestionsBtn");
-  if (loadQuestionsBtn) {
-    loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
-  }
-
-  // Add question
-  const addQuestionBtn = getEl("addQuestionBtn");
-  if (addQuestionBtn) {
-    addQuestionBtn.addEventListener('click', addNewQuestion);
-  }
-
-  // Add subject
-  const addSubjectBtn = getEl("addSubjectBtn");
+  if (loadQuestionsBtn) loadQuestionsBtn.addEventListener('click', renderQuestionEditor);
+  if (addQuestionBtn) addQuestionBtn.addEventListener('click', addNewQuestion);
   if (addSubjectBtn) {
     addSubjectBtn.addEventListener('click', async () => {
       if (currentUserRole !== "teacher") {
@@ -194,12 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
       await addNewSubject();
     });
   }
-
-  // Pause overlay continue
-  const pauseOverlayContinue = getEl("pauseOverlayContinue");
   if (pauseOverlayContinue) {
     pauseOverlayContinue.addEventListener('click', () => {
-      document.documentElement.requestFullscreen().catch(err => console.error(err));
+      document.documentElement.requestFullscreen().catch(e => console.error(e));
     });
   }
 
@@ -207,38 +182,32 @@ document.addEventListener('DOMContentLoaded', () => {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       if (!user.emailVerified) {
-        addLog(`User ${user.email} not verified – signing out.`);
-        showAuthMessage("Please verify your email address before logging in.", false);
+        showAuthMessage("Please verify your email before logging in.", false);
         await signOut(auth);
         return;
       }
-      currentUserId = user.uid;
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDoc = await getDoc(doc(db, "users", user.uid));
       let role = "student";
       if (userDoc.exists() && userDoc.data().role) {
         role = userDoc.data().role;
       } else {
-        await setDoc(userDocRef, {
+        await setDoc(doc(db, "users", user.uid), {
           email: user.email,
           role: "student",
           createdAt: new Date().toISOString(),
-          emailVerified: user.emailVerified
+          emailVerified: true
         });
       }
       currentUserRole = role;
-      addLog(`User ${user.email} (${role}) logged in.`);
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
       applyRoleBasedUI(role);
       getEl('authScreen').style.display = 'none';
       getEl('appContainer').style.display = 'block';
     } else {
-      currentUserRole = null;
       window.questionBank = getDefaultQuestionBank();
       getEl('authScreen').style.display = 'flex';
       getEl('appContainer').style.display = 'none';
-      addLog("Logged out");
     }
   });
 });
