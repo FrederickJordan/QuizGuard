@@ -33,7 +33,7 @@ export async function handleLogin(email, password) {
     const user = userCredential.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Please verify your email address. Check your inbox.", false);
+      showAuthMessage("Please verify your email address.", false);
       addLog(`Login blocked: ${user.email} not verified.`);
       return;
     }
@@ -65,14 +65,18 @@ export async function handleRegister(email, password, role = "student") {
     await sendEmailVerification(user);
     showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
     addLog(`Verification email sent to ${user.email}`);
-    // Save role to Firestore – this is critical
-    await setDoc(doc(db, "users", user.uid), {
+    
+    // Save role to Firestore
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, {
       email: user.email,
       role: role,
       createdAt: new Date().toISOString(),
       emailVerified: false
     });
     addLog(`User role "${role}" stored for ${user.email}`);
+    console.log(`[auth.js] Role saved: ${role}`);
+    
     await signOut(auth);
   } catch (error) {
     let errorMsg = "Registration failed. ";
@@ -92,7 +96,7 @@ export async function handleGoogleSignIn() {
     const user = result.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Your Google email is not verified. Please verify it.", false);
+      showAuthMessage("Your Google email is not verified.", false);
       return;
     }
     const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -103,15 +107,16 @@ export async function handleGoogleSignIn() {
         createdAt: new Date().toISOString(),
         emailVerified: true
       });
+      console.log("[auth.js] Google user role saved as student");
     }
     showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
     addLog(`Google sign-in: ${user.email}`);
   } catch (err) {
     let msg = "Google sign-in failed. ";
-    if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked. Please allow pop‑ups.";
-    else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized in Firebase.";
+    if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked.";
+    else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized.";
     else msg += err.message;
     showAuthMessage(msg, false);
-    addLog(`Google sign-in error: ${err.code}`);
+    addLog(`Google error: ${err.code}`);
   }
 }
