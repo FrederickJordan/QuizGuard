@@ -15,42 +15,29 @@ window.questionBank = questionBank;
 
 function applyRoleBasedUI(role) {
   const editorBtn = getEl("openEditorBtn");
-  const subjectsListDiv = document.getElementById("subjectsList");
-  const addSubjectBtn = getEl("addSubjectBtn");
   const teacherDashboardBtn = getEl("teacherDashboardBtn");
   const studentHistoryBtn = getEl("studentHistoryBtn");
   const isTeacher = (role === "teacher");
   if (editorBtn) editorBtn.style.display = isTeacher ? "inline-block" : "none";
-  if (subjectsListDiv) subjectsListDiv.style.display = isTeacher ? "block" : "none";
-  if (addSubjectBtn) addSubjectBtn.style.display = isTeacher ? "inline-block" : "none";
   if (teacherDashboardBtn) teacherDashboardBtn.style.display = isTeacher ? "inline-block" : "none";
-  if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block"; // show for all
+  if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block"; // visible to all
 }
 
 async function showTeacherDashboard() {
   const resultsContainer = document.createElement("div");
   resultsContainer.id = "dashboardModal";
-  resultsContainer.style.position = "fixed";
-  resultsContainer.style.top = "0";
-  resultsContainer.style.left = "0";
-  resultsContainer.style.width = "100%";
-  resultsContainer.style.height = "100%";
-  resultsContainer.style.backgroundColor = "rgba(0,0,0,0.8)";
-  resultsContainer.style.zIndex = "3000";
-  resultsContainer.style.overflow = "auto";
-  resultsContainer.style.padding = "20px";
+  resultsContainer.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; overflow:auto; padding:20px;";
   resultsContainer.innerHTML = `
-    <div style="background: white; max-width: 1000px; margin: 20px auto; border-radius: 20px; padding: 20px;">
+    <div style="background:white; max-width:1000px; margin:20px auto; border-radius:20px; padding:20px;">
       <h2>Teacher Dashboard - Quiz Results</h2>
       <div id="dashboardContent">Loading...</div>
-      <button id="closeDashboard" style="margin-top: 20px; padding: 8px 16px;">Close</button>
+      <button id="closeDashboard" class="home-btn editor-btn" style="margin-top:20px;">Close</button>
     </div>
   `;
   document.body.appendChild(resultsContainer);
   const closeBtn = resultsContainer.querySelector("#closeDashboard");
   closeBtn.onclick = () => resultsContainer.remove();
 
-  // Fetch all results where the quiz code belongs to this teacher
   const teacherUid = auth.currentUser?.uid;
   const quizCodesQuery = query(collection(db, "quizCodes"), where("creatorUid", "==", teacherUid));
   const quizCodesSnap = await getDocs(quizCodesQuery);
@@ -75,7 +62,7 @@ async function showTeacherDashboard() {
       <td style='padding:8px;'>${data.penalties}</td>
       <td style='padding:8px;'>${new Date(data.timestamp).toLocaleString()}</td>
       <td style='padding:8px;'><button class='viewDetails' data-id='${doc.id}'>View</button></td>
-    </tr>`;
+     </tr>`;
   });
   html += "</table>";
   document.getElementById("dashboardContent").innerHTML = html;
@@ -100,20 +87,12 @@ async function showStudentHistory() {
   const resultsSnap = await getDocs(resultsQuery);
   const modal = document.createElement("div");
   modal.id = "historyModal";
-  modal.style.position = "fixed";
-  modal.style.top = "0";
-  modal.style.left = "0";
-  modal.style.width = "100%";
-  modal.style.height = "100%";
-  modal.style.backgroundColor = "rgba(0,0,0,0.8)";
-  modal.style.zIndex = "3000";
-  modal.style.overflow = "auto";
-  modal.style.padding = "20px";
+  modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:3000; overflow:auto; padding:20px;";
   modal.innerHTML = `
-    <div style="background: white; max-width: 800px; margin: 20px auto; border-radius: 20px; padding: 20px;">
+    <div style="background:white; max-width:800px; margin:20px auto; border-radius:20px; padding:20px;">
       <h2>My Quiz History</h2>
       <div id="historyContent">Loading...</div>
-      <button id="closeHistory" style="margin-top: 20px; padding: 8px 16px;">Close</button>
+      <button id="closeHistory" class="home-btn editor-btn" style="margin-top:20px;">Close</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -132,7 +111,7 @@ async function showStudentHistory() {
       <td style='padding:8px;'>${data.score}/100</td>
       <td style='padding:8px;'>${data.penalties}</td>
       <td style='padding:8px;'><button class='viewResult' data-id='${doc.id}'>View</button></td>
-    </tr>`;
+     </tr>`;
   });
   html += "</table>";
   document.getElementById("historyContent").innerHTML = html;
