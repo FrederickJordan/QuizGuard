@@ -16,7 +16,7 @@ let quizActive = false;
 let pendingFailure = false;
 let selectedAnswerIndex = null;
 let wrongAnswers = [];
-let currentQuizCode = null;     // if joined via code, store the code for saving results
+let currentQuizCode = null;
 let currentQuizSubject = null;
 let currentQuizDifficulty = null;
 
@@ -42,7 +42,7 @@ async function requestAiFeedback(wrongAnswers) {
   });
   if (!response.ok) throw new Error(`AI endpoint error ${response.status}`);
   const data = await response.json();
-  return data.feedback || "AI feedback is unavailable right now.";
+  return data.feedback || "AI feedback unavailable.";
 }
 
 export function updateStats() {
@@ -84,7 +84,7 @@ async function saveQuizResults() {
     aiFeedback: aiFeedbackText,
     timestamp: new Date().toISOString()
   });
-  addLog("Quiz results saved to database.");
+  addLog("Quiz results saved.");
 }
 
 function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = null, difficulty = null) {
@@ -136,7 +136,7 @@ function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = 
 
 export function startQuiz() {
   if (!questionBank) {
-    alert("Question bank not ready. Please wait.");
+    alert("Question bank not ready.");
     return;
   }
   const subject = getEl("subjectSelect").value;
@@ -159,15 +159,14 @@ export async function joinQuizByCode(code) {
   const q = query(collection(db, "quizCodes"), where("code", "==", code));
   const snapshot = await getDocs(q);
   if (snapshot.empty) {
-    const errorDiv = getEl("joinCodeError");
-    if (errorDiv) errorDiv.innerText = "Invalid code. No quiz found.";
+    const errDiv = getEl("joinCodeError");
+    if (errDiv) errDiv.innerText = "Invalid code. No quiz found.";
     return;
   }
-  const docSnap = snapshot.docs[0];
-  const data = docSnap.data();
+  const data = snapshot.docs[0].data();
   const selected = getEl("minigameSelect").value;
   startQuizWithQuestions(data.questions, selected, code, data.subject, data.difficulty);
-  addLog(`Joined quiz via code ${code} (${data.subject} - ${data.difficulty})`);
+  addLog(`Joined quiz via code ${code}`);
 }
 
 export function loadQuestion() {
@@ -250,7 +249,6 @@ export async function endQuiz() {
       showAiFeedback(aiFeedbackText);
     } catch {
       showAiFeedback("Unable to fetch AI feedback right now.");
-      aiFeedbackText = "AI feedback unavailable.";
     }
   } else {
     clearAiFeedback();
