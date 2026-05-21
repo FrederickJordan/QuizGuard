@@ -30,9 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
       }
     });
-    console.log("Password toggle attached");
-  } else {
-    console.error("togglePassword not found");
   }
 
   // ========== AUTH BUTTONS ==========
@@ -51,10 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   el("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);
   el("logoutBtn")?.addEventListener('click', () => signOut(auth));
+
+  // Quiz controls
   el("startQuizBtn")?.addEventListener('click', startQuiz);
   el("backToHomeBtn")?.addEventListener('click', returnToHome);
 
-  // ========== JOIN QUIZ BY CODE ==========
+  // Join quiz by code (students)
   el("joinQuizBtn")?.addEventListener('click', async () => {
     const code = el("joinCodeInput")?.value.trim();
     const errDiv = el("joinCodeError");
@@ -66,18 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
     await joinQuizByCode(code);
   });
 
-  // ========== TEACHER DASHBOARD (placeholder) ==========
-  el("teacherDashboardBtn")?.addEventListener('click', async () => {
-    alert("Teacher dashboard coming soon");
+  // Teacher dashboard (placeholder)
+  el("teacherDashboardBtn")?.addEventListener('click', () => {
+    alert("Teacher dashboard – view quiz results");
   });
 
-  // ========== STUDENT HISTORY OVERLAY ==========
+  // Student history button
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
 
-  // ========== EDITOR BUTTONS ==========
+  // Editor buttons (teacher only)
   el("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") {
       alert("Only teachers can edit questions.");
@@ -104,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await addNewSubject();
   });
 
-  // ========== PAUSE OVERLAY CONTINUE (fullscreen) ==========
+  // Pause overlay continue (fullscreen)
   el("pauseOverlayContinue")?.addEventListener('click', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
@@ -114,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Auth state changed, user:", user?.email || "null");
     if (user) {
       if (!user.emailVerified) {
-        console.log("Email not verified");
         showAuthMessage("Please verify your email.", false);
         await signOut(auth);
         return;
@@ -125,16 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
       let role = "student";
       if (userDoc.exists() && userDoc.data().role) {
         role = userDoc.data().role;
+        console.log("Retrieved role from Firestore:", role);
       } else {
+        // Fallback: create document
         await setDoc(userDocRef, {
           email: user.email,
           role: "student",
           createdAt: new Date().toISOString(),
           emailVerified: true
         });
+        role = "student";
+        console.log("Created new user document with role student");
       }
       currentUserRole = role;
-      console.log("User role:", role);
 
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
@@ -142,11 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // Apply role-based UI
       const editorBtn = el("openEditorBtn");
       const teacherDashboardBtn = el("teacherDashboardBtn");
-      const joinSection = el("join-code-section"); // optional: hide join section from teachers?
+      const joinSection = el("join-code-section");
+      const studentHistoryBtn = el("studentHistoryBtn");
+
       if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
       if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
+      // Show join section and history button for both roles (students will use them, teachers can also join quizzes)
+      if (joinSection) joinSection.style.display = "block";
+      if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block";
 
-      // Show main app, hide login
+      // Show main app
       el("authScreen").style.display = "none";
       el("appContainer").style.display = "block";
     } else {
