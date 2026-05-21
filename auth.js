@@ -33,7 +33,7 @@ export async function handleLogin(email, password) {
     const user = userCredential.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Please verify your email address.", false);
+      showAuthMessage("Please verify your email address. Check your inbox.", false);
       addLog(`Login blocked: ${user.email} not verified.`);
       return;
     }
@@ -60,33 +60,24 @@ export async function handleRegister(email, password, role = "student") {
     return;
   }
   try {
-    // 1. Create the user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    console.log("User created:", user.uid, user.email);
-
-    // 2. Send verification email
     await sendEmailVerification(user);
     showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
     addLog(`Verification email sent to ${user.email}`);
     
-    // 3. Store user role in Firestore (CRITICAL)
+    // Save user role – this document will later also contain the questionBank
     const userDocRef = doc(db, "users", user.uid);
-    const userData = {
+    await setDoc(userDocRef, {
       email: user.email,
       role: role,
       createdAt: new Date().toISOString(),
       emailVerified: false
-    };
-    console.log("Attempting to save to Firestore:", userData);
-    await setDoc(userDocRef, userData);
-    console.log("Firestore save successful");
+    });
     addLog(`User role "${role}" stored for ${user.email}`);
     
-    // 4. Sign out until email is verified
     await signOut(auth);
   } catch (error) {
-    console.error("Registration error details:", error);
     let errorMsg = "Registration failed. ";
     if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
     else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
@@ -104,7 +95,7 @@ export async function handleGoogleSignIn() {
     const user = result.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Your Google email is not verified.", false);
+      showAuthMessage("Your Google email is not verified. Please verify it.", false);
       return;
     }
     const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -115,14 +106,13 @@ export async function handleGoogleSignIn() {
         createdAt: new Date().toISOString(),
         emailVerified: true
       });
-      console.log("[auth.js] Google user role saved as student");
     }
     showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
     addLog(`Google sign-in: ${user.email}`);
   } catch (err) {
     let msg = "Google sign-in failed. ";
-    if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked.";
-    else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized.";
+    if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked. Please allow pop‑ups.";
+    else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized in Firebase.";
     else msg += err.message;
     showAuthMessage(msg, false);
     addLog(`Google error: ${err.code}`);
