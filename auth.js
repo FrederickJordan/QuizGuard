@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   sendEmailVerification
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { getEl, addLog } from './utils.js';
 
 const db = getFirestore();
