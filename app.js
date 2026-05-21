@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el("startQuizBtn")?.addEventListener('click', startQuiz);
   el("backToHomeBtn")?.addEventListener('click', returnToHome);
 
-  // Join quiz by code (students)
+  // Join quiz by code
   el("joinQuizBtn")?.addEventListener('click', async () => {
     const code = el("joinCodeInput")?.value.trim();
     const errDiv = el("joinCodeError");
@@ -65,16 +65,37 @@ document.addEventListener('DOMContentLoaded', () => {
     await joinQuizByCode(code);
   });
 
-  // Teacher dashboard (placeholder)
+  // Teacher dashboard placeholder
   el("teacherDashboardBtn")?.addEventListener('click', () => {
     alert("Teacher dashboard – view quiz results");
   });
 
-  // Student history button
+  // Student history button – opens overlay
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
+
+  // ========== HISTORY CLOSE BUTTON (direct inline event as fallback) ==========
+  const closeHistoryBtn = document.getElementById("closeHistoryLog");
+  if (closeHistoryBtn) {
+    closeHistoryBtn.onclick = () => {
+      const overlay = document.getElementById("historyLogOverlay");
+      if (overlay) overlay.style.display = "none";
+    };
+  } else {
+    console.warn("closeHistoryBtn not found");
+  }
+
+  // Click outside to close history overlay
+  const historyOverlay = document.getElementById("historyLogOverlay");
+  if (historyOverlay) {
+    historyOverlay.addEventListener('click', (e) => {
+      if (e.target === historyOverlay) {
+        historyOverlay.style.display = "none";
+      }
+    });
+  }
 
   // Editor buttons (teacher only)
   el("openEditorBtn")?.addEventListener('click', () => {
@@ -103,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await addNewSubject();
   });
 
-  // Pause overlay continue (fullscreen)
+  // Pause overlay continue
   el("pauseOverlayContinue")?.addEventListener('click', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
@@ -125,7 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
         role = userDoc.data().role;
         console.log("Retrieved role from Firestore:", role);
       } else {
-        // Fallback: create document
+        // No document – create one with default student role
+        console.warn("No user document found, creating with student role");
         await setDoc(userDocRef, {
           email: user.email,
           role: "student",
@@ -133,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
           emailVerified: true
         });
         role = "student";
-        console.log("Created new user document with role student");
       }
       currentUserRole = role;
 
@@ -148,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
       if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
-      // Show join section and history button for both roles (students will use them, teachers can also join quizzes)
       if (joinSection) joinSection.style.display = "block";
       if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block";
 
