@@ -1,18 +1,26 @@
 import { auth, db } from './firebase-config.js';
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
-// Load history when the overlay is opened
-document.getElementById('historyLogOverlay')?.addEventListener('click', (e) => {
-  if (e.target === document.getElementById('historyLogOverlay')) {
-    e.target.style.display = 'none';
-  }
-});
+// Close button for history overlay
+const closeBtn = document.getElementById('closeHistoryLog');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    const overlay = document.getElementById('historyLogOverlay');
+    if (overlay) overlay.style.display = 'none';
+  });
+}
 
-document.getElementById('closeHistoryLog')?.addEventListener('click', () => {
-  document.getElementById('historyLogOverlay').style.display = 'none';
-});
+// Click outside to close
+const overlay = document.getElementById('historyLogOverlay');
+if (overlay) {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.style.display = 'none';
+    }
+  });
+}
 
-// Function to load history (called when overlay opens)
+// Function to load and display history
 async function loadHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
@@ -39,14 +47,19 @@ async function loadHistory() {
     snapshot.forEach(doc => {
       const data = doc.data();
       const date = new Date(data.timestamp).toLocaleString();
+      const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
       html += `
-        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${data.score >= 70 ? '#22c55e' : '#ef4444'}">
-          <div style="display:flex; justify-content:space-between;">
-            <strong>${data.subject || 'Quiz'}</strong>
-            <span style="font-size:24px;">${data.score}/100</span>
+        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <strong style="font-size:18px;">${escapeHtml(data.subject || 'Quiz')}</strong>
+            <span style="font-size:28px; font-weight:bold; color:${scoreColor};">${data.score}/100</span>
           </div>
-          <div style="color:#64748b; font-size:13px;">${date}</div>
-          <div>Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+          <div style="color:#64748b; font-size:13px; margin:10px 0;">${date}</div>
+          <div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <span>⚠️ Penalties: ${data.penalties || 0}</span>
+            <span>🔄 Tab Switches: ${data.tabSwitches || 0}</span>
+            <span>❌ Wrong: ${data.wrongAnswers?.length || 0}</span>
+          </div>
         </div>
       `;
     });
@@ -57,5 +70,10 @@ async function loadHistory() {
   }
 }
 
-// Initial load when module runs
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// Load history when script runs
 loadHistory();
