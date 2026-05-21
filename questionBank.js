@@ -164,7 +164,7 @@ export function getDefaultQuestionBank() {
 export async function saveQuestionBankToFirestore() {
   if (!auth.currentUser) return;
   const userDocRef = doc(db, "users", auth.currentUser.uid);
-  await setDoc(userDocRef, { questionBank });
+  await setDoc(userDocRef, { questionBank }, { merge: true });
   addLog("Question bank saved.");
 }
 
