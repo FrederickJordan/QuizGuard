@@ -14,12 +14,21 @@ let currentUserRole = null;
 
 window.questionBank = questionBank;
 
+// Debug function to manually set role (run in console)
+window.setUserRole = async (role) => {
+  const user = auth.currentUser;
+  if (!user) { alert("Not logged in"); return; }
+  await setDoc(doc(db, "users", user.uid), { role: role }, { merge: true });
+  console.log(`Role set to ${role} for ${user.email}`);
+  alert(`Role updated to ${role}. Please refresh.`);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
 
   function el(id) { return document.getElementById(id); }
 
-  // ========== PASSWORD EYE TOGGLE ==========
+  // Password toggle
   const togglePassword = el("togglePassword");
   if (togglePassword) {
     togglePassword.addEventListener('click', () => {
@@ -32,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ========== AUTH BUTTONS ==========
+  // Auth buttons
   el("loginBtn")?.addEventListener('click', () => {
     const email = el("loginEmail")?.value || "";
     const password = el("loginPassword")?.value || "";
@@ -70,24 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
     alert("Teacher dashboard – view quiz results");
   });
 
-  // Student history button – opens overlay
+  // Student history button
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
 
-  // ========== HISTORY CLOSE BUTTON (direct inline event as fallback) ==========
+  // History close button (inline to ensure it works)
   const closeHistoryBtn = document.getElementById("closeHistoryLog");
   if (closeHistoryBtn) {
     closeHistoryBtn.onclick = () => {
       const overlay = document.getElementById("historyLogOverlay");
       if (overlay) overlay.style.display = "none";
     };
-  } else {
-    console.warn("closeHistoryBtn not found");
   }
 
-  // Click outside to close history overlay
+  // Click outside to close
   const historyOverlay = document.getElementById("historyLogOverlay");
   if (historyOverlay) {
     historyOverlay.addEventListener('click', (e) => {
@@ -129,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
 
-  // ========== AUTH STATE LISTENER (role-based UI) ==========
+  // Auth state listener
   onAuthStateChanged(auth, async (user) => {
     console.log("Auth state changed, user:", user?.email || "null");
     if (user) {
@@ -138,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await signOut(auth);
         return;
       }
-      // Get role from Firestore
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
       let role = "student";
@@ -146,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         role = userDoc.data().role;
         console.log("Retrieved role from Firestore:", role);
       } else {
-        // No document – create one with default student role
         console.warn("No user document found, creating with student role");
         await setDoc(userDocRef, {
           email: user.email,
@@ -172,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (joinSection) joinSection.style.display = "block";
       if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block";
 
-      // Show main app
       el("authScreen").style.display = "none";
       el("appContainer").style.display = "block";
     } else {
