@@ -1,5 +1,7 @@
 import { getEl, escapeHtml, addLog } from './utils.js';
 import { questionBank, modifyAndSave } from './questionBank.js';
+import { db, auth } from './firebase-config.js';
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 export function renderSubjectsList() {
   const container = getEl('subjectsList');
@@ -160,6 +162,45 @@ export function renderQuestionEditor() {
         renderQuestionEditor();
       }
     });
+  });
+}
+
+// Publish quiz (teacher only)
+const publishBtn = getEl("publishQuizBtn");
+if (publishBtn) {
+  publishBtn.addEventListener('click', async () => {
+    const subject = getEl("editorSubjectSelect").value;
+    const difficulty = getEl("editorDifficultySelect").value;
+    const questions = questionBank[subject]?.[difficulty];
+    if (!questions || questions.length === 0) {
+      alert("No questions in this quiz to publish.");
+      return;
+    }
+    const teacherUid = auth.currentUser?.uid;
+    if (!teacherUid) {
+      alert("You must be logged in as a teacher.");
+      return;
+    }
+    let code = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeQuery = query(collection(db, "quizCodes"), where("code", "==", code));
+    const existing = await getDocs(codeQuery);
+    if (!existing.empty) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    await addDoc(collection(db, "quizCodes"), {
+      code: code,
+      creatorUid: teacherUid,
+      subject: subject,
+      difficulty: difficulty,
+      questions: questions,
+      createdAt: new Date().toISOString()
+    });
+    const msgDiv = getEl("publishMessage");
+    if (msgDiv) {
+      msgDiv.innerHTML = `✅ Quiz published! Code: <strong>${code}</strong> (share with students)`;
+      setTimeout(() => msgDiv.innerHTML = "", 8000);
+    }
+    addLog(`Quiz published with code ${code}`);
   });
 }
 
