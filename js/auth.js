@@ -4,10 +4,10 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithPopup,
   sendEmailVerification
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore';
 import { getEl, addLog } from './utils.js';
 
 const db = getFirestore();
@@ -24,6 +24,7 @@ export function showAuthMessage(message, isSuccess = false) {
 }
 
 export async function handleLogin(email, password) {
+  console.log("handleLogin called with", email);
   if (!email || !password) {
     showAuthMessage("Enter email and password.", false);
     return;
@@ -33,24 +34,23 @@ export async function handleLogin(email, password) {
     const user = userCredential.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Please verify your email address. Check your inbox and spam folder.", false);
-      addLog(`Login blocked: ${user.email} not verified.`);
+      showAuthMessage("Please verify your email address. Check your inbox.", false);
       return;
     }
     showAuthMessage(`Welcome back, ${user.email}!`, true);
-    addLog(`User logged in: ${user.email}`);
   } catch (error) {
+    console.error("Login error", error);
     let errorMsg = "Login failed. ";
     if (error.code === 'auth/user-not-found') errorMsg += "No account found.";
     else if (error.code === 'auth/wrong-password') errorMsg += "Incorrect password.";
     else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
     else errorMsg += error.message;
     showAuthMessage(errorMsg, false);
-    addLog(`Login error: ${error.code}`);
   }
 }
 
 export async function handleRegister(email, password, role = "student") {
+  console.log("handleRegister called with", email, role);
   if (!email || !password) {
     showAuthMessage("Enter email and password.", false);
     return;
@@ -64,23 +64,21 @@ export async function handleRegister(email, password, role = "student") {
     const user = userCredential.user;
     await sendEmailVerification(user);
     showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
-    addLog(`Verification email sent to ${user.email}`);
     await setDoc(doc(db, "users", user.uid), {
       email: user.email,
       role: role,
       createdAt: new Date().toISOString(),
       emailVerified: false
     });
-    addLog(`User role "${role}" stored for ${user.email}`);
     await signOut(auth);
   } catch (error) {
+    console.error("Register error", error);
     let errorMsg = "Registration failed. ";
     if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
     else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
     else if (error.code === 'auth/weak-password') errorMsg += "Password too weak.";
     else errorMsg += error.message;
     showAuthMessage(errorMsg, false);
-    addLog(`Registration error: ${error.code}`);
   }
 }
 
@@ -91,7 +89,7 @@ export async function handleGoogleSignIn() {
     const user = result.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      showAuthMessage("Your Google email is not verified. Please verify it and try again.", false);
+      showAuthMessage("Your Google email is not verified. Please verify it.", false);
       return;
     }
     const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -102,17 +100,14 @@ export async function handleGoogleSignIn() {
         createdAt: new Date().toISOString(),
         emailVerified: true
       });
-      addLog(`Google user role created for ${user.email}`);
     }
     showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
-    addLog(`Google sign-in: ${user.email}`);
   } catch (err) {
+    console.error("Google popup error", err);
     let msg = "Google sign-in failed. ";
     if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked. Please allow pop‑ups.";
     else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized in Firebase.";
-    else if (err.code === 'auth/cancelled-popup-request') msg += "Sign-in cancelled.";
     else msg += err.message;
     showAuthMessage(msg, false);
-    addLog(`Google sign-in error: ${err.code}`);
   }
 }
