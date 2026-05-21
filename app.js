@@ -100,6 +100,4 @@ document.addEventListener('DOMContentLoaded', () => {
         import('./historyLog.js');
       }
     });
-  }
-  
-});
+  };
