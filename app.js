@@ -3,7 +3,7 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -17,7 +17,6 @@ window.questionBank = questionBank;
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
 
-  // Debug: check if buttons exist
   const loginBtn = document.getElementById("loginBtn");
   const registerBtn = document.getElementById("registerBtn");
   const googleBtn = document.getElementById("googleSignInBtn");
@@ -30,12 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const email = document.getElementById("loginEmail")?.value || "";
       const password = document.getElementById("loginPassword")?.value || "";
       console.log("Login clicked with email:", email);
-      alert("Login clicked! Check console for details.");
       handleLogin(email, password);
     });
   } else {
     console.error("loginBtn not found");
-    alert("loginBtn missing from HTML!");
   }
 
   if (registerBtn) {
@@ -45,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const roleSelect = document.getElementById("registerRole");
       const role = roleSelect ? roleSelect.value : "student";
       console.log("Register clicked with email:", email);
-      alert("Register clicked! Check console for details.");
       handleRegister(email, password, role);
     });
   } else {
@@ -56,6 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
     googleBtn.addEventListener('click', () => {
       console.log("Google sign-in clicked");
       handleGoogleSignIn();
+    });
+  }
+
+  // History Log Button Handler
+  const historyLogBtn = document.getElementById("studentHistoryBtn");
+  if (historyLogBtn) {
+    historyLogBtn.addEventListener('click', () => {
+      const overlay = document.getElementById('historyLogOverlay');
+      if (overlay) overlay.style.display = 'block';
     });
   }
 
@@ -85,19 +90,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
-// History Log Button Handler
-  const historyLogBtn = document.getElementById("studentHistoryBtn");
-  if (historyLogBtn) {
-    historyLogBtn.addEventListener('click', () => {
-      const overlay = document.getElementById('historyLogOverlay');
-      const container = document.getElementById('historyLogContainer');
-      if (overlay && container) {
-        container.innerHTML = '<p style="text-align: center; padding: 40px;">Loading your history...</p>';
-        overlay.style.display = 'block';
-        
-        // Load the history log script
-        import('./historyLog.js');
-      }
-    });
-  };
