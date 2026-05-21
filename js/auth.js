@@ -24,7 +24,7 @@ export function showAuthMessage(message, isSuccess = false) {
 }
 
 export async function handleLogin(email, password) {
-  console.log("handleLogin called with", email);
+  console.log("handleLogin called", email);
   if (!email || !password) {
     showAuthMessage("Enter email and password.", false);
     return;
@@ -40,17 +40,16 @@ export async function handleLogin(email, password) {
     showAuthMessage(`Welcome back, ${user.email}!`, true);
   } catch (error) {
     console.error("Login error", error);
-    let errorMsg = "Login failed. ";
-    if (error.code === 'auth/user-not-found') errorMsg += "No account found.";
-    else if (error.code === 'auth/wrong-password') errorMsg += "Incorrect password.";
-    else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
-    else errorMsg += error.message;
-    showAuthMessage(errorMsg, false);
+    let msg = "Login failed. ";
+    if (error.code === 'auth/user-not-found') msg += "No account found.";
+    else if (error.code === 'auth/wrong-password') msg += "Incorrect password.";
+    else msg += error.message;
+    showAuthMessage(msg, false);
   }
 }
 
 export async function handleRegister(email, password, role = "student") {
-  console.log("handleRegister called with", email, role);
+  console.log("handleRegister called", email, role);
   if (!email || !password) {
     showAuthMessage("Enter email and password.", false);
     return;
@@ -73,12 +72,12 @@ export async function handleRegister(email, password, role = "student") {
     await signOut(auth);
   } catch (error) {
     console.error("Register error", error);
-    let errorMsg = "Registration failed. ";
-    if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
-    else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
-    else if (error.code === 'auth/weak-password') errorMsg += "Password too weak.";
-    else errorMsg += error.message;
-    showAuthMessage(errorMsg, false);
+    let msg = "Registration failed. ";
+    if (error.code === 'auth/email-already-in-use') msg += "Email already registered.";
+    else if (error.code === 'auth/invalid-email') msg += "Invalid email format.";
+    else if (error.code === 'auth/weak-password') msg += "Password too weak.";
+    else msg += error.message;
+    showAuthMessage(msg, false);
   }
 }
 
