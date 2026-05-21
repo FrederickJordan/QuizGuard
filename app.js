@@ -17,74 +17,121 @@ window.questionBank = questionBank;
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
 
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const googleBtn = document.getElementById("googleSignInBtn");
-  console.log("loginBtn exists?", !!loginBtn);
-  console.log("registerBtn exists?", !!registerBtn);
-  console.log("googleBtn exists?", !!googleBtn);
+  // Helper to get element
+  const el = (id) => document.getElementById(id);
 
-  if (loginBtn) {
-    loginBtn.addEventListener('click', () => {
-      const email = document.getElementById("loginEmail")?.value || "";
-      const password = document.getElementById("loginPassword")?.value || "";
-      console.log("Login clicked with email:", email);
-      handleLogin(email, password);
-    });
-  } else {
-    console.error("loginBtn not found");
-  }
+  // Auth buttons
+  el("loginBtn")?.addEventListener('click', () => {
+    const email = el("loginEmail")?.value || "";
+    const password = el("loginPassword")?.value || "";
+    handleLogin(email, password);
+  });
 
-  if (registerBtn) {
-    registerBtn.addEventListener('click', () => {
-      const email = document.getElementById("loginEmail")?.value || "";
-      const password = document.getElementById("loginPassword")?.value || "";
-      const roleSelect = document.getElementById("registerRole");
-      const role = roleSelect ? roleSelect.value : "student";
-      console.log("Register clicked with email:", email);
-      handleRegister(email, password, role);
-    });
-  } else {
-    console.error("registerBtn not found");
-  }
+  el("registerBtn")?.addEventListener('click', () => {
+    const email = el("loginEmail")?.value || "";
+    const password = el("loginPassword")?.value || "";
+    const role = el("registerRole")?.value || "student";
+    handleRegister(email, password, role);
+  });
 
-  if (googleBtn) {
-    googleBtn.addEventListener('click', () => {
-      console.log("Google sign-in clicked");
-      handleGoogleSignIn();
-    });
-  }
+  el("googleSignInBtn")?.addEventListener('click', () => handleGoogleSignIn());
+  el("logoutBtn")?.addEventListener('click', () => signOut(auth));
 
-  const historyLogBtn = document.getElementById("studentHistoryBtn");
-  if (historyLogBtn) {
-    historyLogBtn.addEventListener('click', () => {
-      const overlay = document.getElementById('historyLogOverlay');
-      if (overlay) overlay.style.display = 'block';
-    });
-  }
+  // Quiz controls
+  el("startQuizBtn")?.addEventListener('click', startQuiz);
+  el("backToHomeBtn")?.addEventListener('click', returnToHome);
 
+  // Join quiz by code
+  el("joinQuizBtn")?.addEventListener('click', async () => {
+    const code = el("joinCodeInput")?.value.trim();
+    const errDiv = el("joinCodeError");
+    if (!code || code.length !== 6) {
+      if (errDiv) errDiv.innerText = "Enter 6-digit code";
+      return;
+    }
+    if (errDiv) errDiv.innerText = "";
+    await joinQuizByCode(code);
+  });
+
+  // Teacher dashboard (placeholder)
+  el("teacherDashboardBtn")?.addEventListener('click', async () => {
+    alert("Teacher dashboard coming soon");
+  });
+
+  // Student history button (opens overlay)
+  el("studentHistoryBtn")?.addEventListener('click', () => {
+    const overlay = el("historyLogOverlay");
+    if (overlay) overlay.style.display = "block";
+  });
+
+  // Editor buttons (teacher only – visibility set after login)
+  el("openEditorBtn")?.addEventListener('click', () => {
+    if (currentUserRole !== "teacher") {
+      alert("Only teachers can edit questions.");
+      return;
+    }
+    renderSubjectsList();
+    renderQuestionEditor();
+    el("homeScreen").style.display = "none";
+    el("editorScreen").style.display = "block";
+  });
+
+  el("closeEditorBtn")?.addEventListener('click', () => {
+    el("editorScreen").style.display = "none";
+    el("homeScreen").style.display = "flex";
+  });
+
+  el("loadQuestionsBtn")?.addEventListener('click', renderQuestionEditor);
+  el("addQuestionBtn")?.addEventListener('click', addNewQuestion);
+  el("addSubjectBtn")?.addEventListener('click', async () => {
+    if (currentUserRole !== "teacher") {
+      alert("Only teachers can add subjects.");
+      return;
+    }
+    await addNewSubject();
+  });
+
+  // Pause overlay continue (fullscreen)
+  el("pauseOverlayContinue")?.addEventListener('click', () => {
+    document.documentElement.requestFullscreen().catch(console.error);
+  });
+
+  // Auth state listener
   onAuthStateChanged(auth, async (user) => {
-    console.log("Auth state changed, user =", user ? user.email : "null");
     if (user) {
       if (!user.emailVerified) {
-        console.log("Email not verified");
         showAuthMessage("Please verify your email.", false);
         await signOut(auth);
         return;
       }
-      console.log("User verified, loading data...");
       const userDoc = await getDoc(doc(db, "users", user.uid));
       let role = "student";
       if (userDoc.exists() && userDoc.data().role) role = userDoc.data().role;
-      else await setDoc(doc(db, "users", user.uid), { email: user.email, role: "student", createdAt: new Date().toISOString(), emailVerified: true });
+      else {
+        await setDoc(doc(db, "users", user.uid), {
+          email: user.email,
+          role: "student",
+          createdAt: new Date().toISOString(),
+          emailVerified: true
+        });
+      }
       currentUserRole = role;
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
-      document.getElementById("authScreen").style.display = "none";
-      document.getElementById("appContainer").style.display = "block";
+
+      // Show/hide teacher buttons
+      const editorBtn = el("openEditorBtn");
+      const teacherDashboardBtn = el("teacherDashboardBtn");
+      if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
+      if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
+
+      el("authScreen").style.display = "none";
+      el("appContainer").style.display = "block";
     } else {
-      document.getElementById("authScreen").style.display = "flex";
-      document.getElementById("appContainer").style.display = "none";
+      currentUserRole = null;
+      window.questionBank = getDefaultQuestionBank();
+      el("authScreen").style.display = "flex";
+      el("appContainer").style.display = "none";
     }
   });
 });
