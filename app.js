@@ -3,7 +3,7 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore';
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -17,10 +17,25 @@ window.questionBank = questionBank;
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
 
-  // Helper to get element
-  const el = (id) => document.getElementById(id);
+  function el(id) { return document.getElementById(id); }
 
-  // Auth buttons
+  // ========== PASSWORD EYE TOGGLE ==========
+  const togglePassword = el("togglePassword");
+  if (togglePassword) {
+    togglePassword.addEventListener('click', () => {
+      const pwd = el("loginPassword");
+      if (pwd) {
+        const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+        pwd.setAttribute('type', type);
+        togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+      }
+    });
+    console.log("Password toggle attached");
+  } else {
+    console.error("togglePassword not found");
+  }
+
+  // ========== AUTH BUTTONS ==========
   el("loginBtn")?.addEventListener('click', () => {
     const email = el("loginEmail")?.value || "";
     const password = el("loginPassword")?.value || "";
@@ -34,14 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRegister(email, password, role);
   });
 
-  el("googleSignInBtn")?.addEventListener('click', () => handleGoogleSignIn());
+  el("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);
   el("logoutBtn")?.addEventListener('click', () => signOut(auth));
-
-  // Quiz controls
   el("startQuizBtn")?.addEventListener('click', startQuiz);
   el("backToHomeBtn")?.addEventListener('click', returnToHome);
 
-  // Join quiz by code
+  // ========== JOIN QUIZ BY CODE ==========
   el("joinQuizBtn")?.addEventListener('click', async () => {
     const code = el("joinCodeInput")?.value.trim();
     const errDiv = el("joinCodeError");
@@ -53,18 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
     await joinQuizByCode(code);
   });
 
-  // Teacher dashboard (placeholder)
+  // ========== TEACHER DASHBOARD (placeholder) ==========
   el("teacherDashboardBtn")?.addEventListener('click', async () => {
     alert("Teacher dashboard coming soon");
   });
 
-  // Student history button (opens overlay)
+  // ========== STUDENT HISTORY OVERLAY ==========
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
 
-  // Editor buttons (teacher only – visibility set after login)
+  // ========== EDITOR BUTTONS ==========
   el("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") {
       alert("Only teachers can edit questions.");
@@ -91,24 +104,29 @@ document.addEventListener('DOMContentLoaded', () => {
     await addNewSubject();
   });
 
-  // Pause overlay continue (fullscreen)
+  // ========== PAUSE OVERLAY CONTINUE (fullscreen) ==========
   el("pauseOverlayContinue")?.addEventListener('click', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
 
-  // Auth state listener
+  // ========== AUTH STATE LISTENER (role-based UI) ==========
   onAuthStateChanged(auth, async (user) => {
+    console.log("Auth state changed, user:", user?.email || "null");
     if (user) {
       if (!user.emailVerified) {
+        console.log("Email not verified");
         showAuthMessage("Please verify your email.", false);
         await signOut(auth);
         return;
       }
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+      // Get role from Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
       let role = "student";
-      if (userDoc.exists() && userDoc.data().role) role = userDoc.data().role;
-      else {
-        await setDoc(doc(db, "users", user.uid), {
+      if (userDoc.exists() && userDoc.data().role) {
+        role = userDoc.data().role;
+      } else {
+        await setDoc(userDocRef, {
           email: user.email,
           role: "student",
           createdAt: new Date().toISOString(),
@@ -116,15 +134,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
       currentUserRole = role;
+      console.log("User role:", role);
+
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
 
-      // Show/hide teacher buttons
+      // Apply role-based UI
       const editorBtn = el("openEditorBtn");
       const teacherDashboardBtn = el("teacherDashboardBtn");
+      const joinSection = el("join-code-section"); // optional: hide join section from teachers?
       if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
       if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
 
+      // Show main app, hide login
       el("authScreen").style.display = "none";
       el("appContainer").style.display = "block";
     } else {
