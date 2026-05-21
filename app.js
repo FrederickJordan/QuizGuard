@@ -85,3 +85,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// History Log Button Handler
+  const historyLogBtn = document.getElementById("studentHistoryBtn");
+  if (historyLogBtn) {
+    historyLogBtn.addEventListener('click', () => {
+      const overlay = document.getElementById('historyLogOverlay');
+      const container = document.getElementById('historyLogContainer');
+      if (overlay && container) {
+        container.innerHTML = '<p style="text-align: center; padding: 40px;">Loading your history...</p>';
+        overlay.style.display = 'block';
+        
+        // Load the history log script
+        import('./historyLog.js');
+      }
+    });
+  }
+  
+});
