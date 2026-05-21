@@ -1,34 +1,157 @@
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
-import { startQuiz, returnToHome } from './quiz.js';
+import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
 import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
 
 const db = getFirestore();
 let currentUserRole = null;
+let currentUserId = null;
 
-// Make questionBank available globally for editor functions
 window.questionBank = questionBank;
 
-// Apply UI restrictions based on role
 function applyRoleBasedUI(role) {
   const editorBtn = getEl("openEditorBtn");
   const subjectsListDiv = document.getElementById("subjectsList");
   const addSubjectBtn = getEl("addSubjectBtn");
-  
+  const teacherDashboardBtn = getEl("teacherDashboardBtn");
+  const studentHistoryBtn = getEl("studentHistoryBtn");
   const isTeacher = (role === "teacher");
   if (editorBtn) editorBtn.style.display = isTeacher ? "inline-block" : "none";
   if (subjectsListDiv) subjectsListDiv.style.display = isTeacher ? "block" : "none";
   if (addSubjectBtn) addSubjectBtn.style.display = isTeacher ? "inline-block" : "none";
+  if (teacherDashboardBtn) teacherDashboardBtn.style.display = isTeacher ? "inline-block" : "none";
+  if (studentHistoryBtn) studentHistoryBtn.style.display = "inline-block"; // show for all
 }
 
-// Initialize UI after DOM loads
+async function showTeacherDashboard() {
+  const resultsContainer = document.createElement("div");
+  resultsContainer.id = "dashboardModal";
+  resultsContainer.style.position = "fixed";
+  resultsContainer.style.top = "0";
+  resultsContainer.style.left = "0";
+  resultsContainer.style.width = "100%";
+  resultsContainer.style.height = "100%";
+  resultsContainer.style.backgroundColor = "rgba(0,0,0,0.8)";
+  resultsContainer.style.zIndex = "3000";
+  resultsContainer.style.overflow = "auto";
+  resultsContainer.style.padding = "20px";
+  resultsContainer.innerHTML = `
+    <div style="background: white; max-width: 1000px; margin: 20px auto; border-radius: 20px; padding: 20px;">
+      <h2>Teacher Dashboard - Quiz Results</h2>
+      <div id="dashboardContent">Loading...</div>
+      <button id="closeDashboard" style="margin-top: 20px; padding: 8px 16px;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(resultsContainer);
+  const closeBtn = resultsContainer.querySelector("#closeDashboard");
+  closeBtn.onclick = () => resultsContainer.remove();
+
+  // Fetch all results where the quiz code belongs to this teacher
+  const teacherUid = auth.currentUser?.uid;
+  const quizCodesQuery = query(collection(db, "quizCodes"), where("creatorUid", "==", teacherUid));
+  const quizCodesSnap = await getDocs(quizCodesQuery);
+  const codeList = quizCodesSnap.docs.map(doc => doc.data().code);
+  if (codeList.length === 0) {
+    document.getElementById("dashboardContent").innerHTML = "<p>No quizzes published yet.</p>";
+    return;
+  }
+  const resultsQuery = query(collection(db, "quizResults"), where("code", "in", codeList), orderBy("timestamp", "desc"));
+  const resultsSnap = await getDocs(resultsQuery);
+  if (resultsSnap.empty) {
+    document.getElementById("dashboardContent").innerHTML = "<p>No student results yet.</p>";
+    return;
+  }
+  let html = "<table style='width:100%; border-collapse: collapse;'><tr><th>Student</th><th>Quiz Code</th><th>Score</th><th>Penalties</th><th>Date</th><th>Details</th></tr>";
+  resultsSnap.forEach(doc => {
+    const data = doc.data();
+    html += `<tr style='border-bottom:1px solid #ddd;'>
+      <td style='padding:8px;'>${data.userEmail}</td>
+      <td style='padding:8px;'>${data.code}</td>
+      <td style='padding:8px;'>${data.score}/100</td>
+      <td style='padding:8px;'>${data.penalties}</td>
+      <td style='padding:8px;'>${new Date(data.timestamp).toLocaleString()}</td>
+      <td style='padding:8px;'><button class='viewDetails' data-id='${doc.id}'>View</button></td>
+    </tr>`;
+  });
+  html += "</table>";
+  document.getElementById("dashboardContent").innerHTML = html;
+  document.querySelectorAll(".viewDetails").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const resultId = btn.dataset.id;
+      const resultDoc = await getDoc(doc(db, "quizResults", resultId));
+      const data = resultDoc.data();
+      let wrongHtml = "<ul>";
+      data.wrongAnswers?.forEach(w => {
+        wrongHtml += `<li><strong>${w.question}</strong><br>Your answer: ${w.selectedAnswer}<br>Correct: ${w.correctAnswer}</li>`;
+      });
+      wrongHtml += "</ul>";
+      alert(`Score: ${data.score}\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\nWrong answers:\n${wrongHtml}\nAI Feedback: ${data.aiFeedback || "None"}`);
+    });
+  });
+}
+
+async function showStudentHistory() {
+  const userId = auth.currentUser?.uid;
+  const resultsQuery = query(collection(db, "quizResults"), where("userId", "==", userId), orderBy("timestamp", "desc"));
+  const resultsSnap = await getDocs(resultsQuery);
+  const modal = document.createElement("div");
+  modal.id = "historyModal";
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.backgroundColor = "rgba(0,0,0,0.8)";
+  modal.style.zIndex = "3000";
+  modal.style.overflow = "auto";
+  modal.style.padding = "20px";
+  modal.innerHTML = `
+    <div style="background: white; max-width: 800px; margin: 20px auto; border-radius: 20px; padding: 20px;">
+      <h2>My Quiz History</h2>
+      <div id="historyContent">Loading...</div>
+      <button id="closeHistory" style="margin-top: 20px; padding: 8px 16px;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById("closeHistory").onclick = () => modal.remove();
+  if (resultsSnap.empty) {
+    document.getElementById("historyContent").innerHTML = "<p>No past quizzes found.</p>";
+    return;
+  }
+  let html = "<table style='width:100%; border-collapse: collapse;'><tr><th>Date</th><th>Quiz Code</th><th>Subject</th><th>Score</th><th>Penalties</th><th>Details</th></tr>";
+  resultsSnap.forEach(doc => {
+    const data = doc.data();
+    html += `<tr style='border-bottom:1px solid #ddd;'>
+      <td style='padding:8px;'>${new Date(data.timestamp).toLocaleString()}</td>
+      <td style='padding:8px;'>${data.code || "manual"}</td>
+      <td style='padding:8px;'>${data.subject || "-"}</td>
+      <td style='padding:8px;'>${data.score}/100</td>
+      <td style='padding:8px;'>${data.penalties}</td>
+      <td style='padding:8px;'><button class='viewResult' data-id='${doc.id}'>View</button></td>
+    </tr>`;
+  });
+  html += "</table>";
+  document.getElementById("historyContent").innerHTML = html;
+  document.querySelectorAll(".viewResult").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const resultId = btn.dataset.id;
+      const resultDoc = await getDoc(doc(db, "quizResults", resultId));
+      const data = resultDoc.data();
+      let wrongHtml = "<ul>";
+      data.wrongAnswers?.forEach(w => {
+        wrongHtml += `<li><strong>${w.question}</strong><br>Your answer: ${w.selectedAnswer}<br>Correct: ${w.correctAnswer}</li>`;
+      });
+      wrongHtml += "</ul>";
+      alert(`Score: ${data.score}\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\nWrong answers:\n${wrongHtml}\nAI Feedback: ${data.aiFeedback || "None"}`);
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  
-  // Password toggle
   const toggle = getEl("togglePassword");
   if (toggle) {
     toggle.addEventListener('click', () => {
@@ -39,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Auth buttons
   getEl("loginBtn")?.addEventListener('click', () => handleLogin(getEl("loginEmail").value, getEl("loginPassword").value));
   getEl("registerBtn")?.addEventListener('click', () => {
     const roleSelect = getEl("registerRole");
@@ -48,12 +170,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   getEl("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);
   getEl("logoutBtn")?.addEventListener('click', () => signOut(auth));
-
-  // Quiz controls
   getEl("startQuizBtn")?.addEventListener('click', startQuiz);
   getEl("backToHomeBtn")?.addEventListener('click', returnToHome);
+  getEl("joinQuizBtn")?.addEventListener('click', async () => {
+    const code = getEl("joinCodeInput").value.trim();
+    const errorDiv = getEl("joinCodeError");
+    if (!code || code.length !== 6) {
+      if (errorDiv) errorDiv.innerText = "Please enter a valid 6-digit code.";
+      return;
+    }
+    if (errorDiv) errorDiv.innerText = "";
+    await joinQuizByCode(code);
+  });
+  getEl("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
+  getEl("studentHistoryBtn")?.addEventListener('click', showStudentHistory);
 
-  // Editor – open only if user is teacher (role will be checked inside)
   getEl("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") {
       alert("Only teachers can edit questions.");
@@ -77,31 +208,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     await addNewSubject();
   });
-
-  // Pause overlay continue button (from anticheat)
   getEl("pauseOverlayContinue")?.addEventListener('click', () => {
     document.documentElement.requestFullscreen().catch(err => console.error(err));
   });
 
-  // Auth state listener with email verification and role fetch
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // 1. Check email verification
       if (!user.emailVerified) {
         addLog(`User ${user.email} not verified – signing out.`);
         showAuthMessage("Please verify your email address before logging in.", false);
         await signOut(auth);
         return;
       }
-
-      // 2. Fetch or create user role
+      currentUserId = user.uid;
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
       let role = "student";
       if (userDoc.exists() && userDoc.data().role) {
         role = userDoc.data().role;
       } else {
-        // Create role document for existing users (e.g., those who registered before this update)
         await setDoc(userDocRef, {
           email: user.email,
           role: "student",
@@ -111,19 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       currentUserRole = role;
       addLog(`User ${user.email} (${role}) logged in.`);
-
-      // 3. Load question bank from Firestore
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
-
-      // 4. Apply UI restrictions
       applyRoleBasedUI(role);
-
-      // 5. Show main app
       getEl('authScreen').style.display = 'none';
       getEl('appContainer').style.display = 'block';
     } else {
-      // User logged out
       currentUserRole = null;
       window.questionBank = getDefaultQuestionBank();
       getEl('authScreen').style.display = 'flex';
