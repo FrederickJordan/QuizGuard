@@ -177,7 +177,7 @@ export async function loadQuestionBankFromFirestore() {
     addLog("Loaded from cloud.");
   } else {
     questionBank = getDefaultQuestionBank();
-    await saveQuestionBankToFirestore();
+    await setDoc(userDocRef, { questionBank }, { merge: true });
     addLog("Default bank created.");
   }
 }
