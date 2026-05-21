@@ -3,7 +3,7 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore';
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -14,14 +14,34 @@ let currentUserRole = null;
 
 window.questionBank = questionBank;
 
-// Debug function to manually set role (run in console)
+// Manual role fix tool (run in console if needed)
 window.setUserRole = async (role) => {
   const user = auth.currentUser;
   if (!user) { alert("Not logged in"); return; }
-  await setDoc(doc(db, "users", user.uid), { role: role }, { merge: true });
-  console.log(`Role set to ${role} for ${user.email}`);
-  alert(`Role updated to ${role}. Please refresh.`);
+  const userDocRef = doc(db, "users", user.uid);
+  await setDoc(userDocRef, { role: role }, { merge: true });
+  console.log(`Role set to ${role}`);
+  alert(`Role updated to ${role}. Refresh page.`);
+  location.reload();
 };
+
+// Function to get user role with retry
+async function getUserRoleWithRetry(uid, retries = 3, delay = 500) {
+  const userDocRef = doc(db, "users", uid);
+  console.log(`Checking document: users/${uid}`);
+  for (let i = 0; i < retries; i++) {
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+      const role = docSnap.data().role;
+      console.log(`Role found: ${role}`);
+      return role;
+    }
+    console.log(`Attempt ${i+1}: Document not found, waiting ${delay}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  console.warn("Document not found after retries");
+  return null;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
@@ -76,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Teacher dashboard placeholder
   el("teacherDashboardBtn")?.addEventListener('click', () => {
-    alert("Teacher dashboard – view quiz results");
+    alert("Teacher dashboard – coming soon");
   });
 
   // Student history button
@@ -136,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
 
-  // Auth state listener
+  // Auth state listener with retry
   onAuthStateChanged(auth, async (user) => {
     console.log("Auth state changed, user:", user?.email || "null");
     if (user) {
@@ -145,14 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await signOut(auth);
         return;
       }
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      let role = "student";
-      if (userDoc.exists() && userDoc.data().role) {
-        role = userDoc.data().role;
-        console.log("Retrieved role from Firestore:", role);
-      } else {
-        console.warn("No user document found, creating with student role");
+      // Wait a moment for Firestore to be ready
+      await new Promise(resolve => setTimeout(resolve, 300));
+      let role = await getUserRoleWithRetry(user.uid, 5, 500);
+      if (!role) {
+        console.warn("No role found, creating default student role");
+        const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, {
           email: user.email,
           role: "student",
@@ -162,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         role = "student";
       }
       currentUserRole = role;
+      console.log("Final role set to:", role);
 
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
