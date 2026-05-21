@@ -60,25 +60,33 @@ export async function handleRegister(email, password, role = "student") {
     return;
   }
   try {
+    // 1. Create the user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+    console.log("User created:", user.uid, user.email);
+
+    // 2. Send verification email
     await sendEmailVerification(user);
     showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
     addLog(`Verification email sent to ${user.email}`);
     
-    // Save role to Firestore
+    // 3. Store user role in Firestore (CRITICAL)
     const userDocRef = doc(db, "users", user.uid);
-    await setDoc(userDocRef, {
+    const userData = {
       email: user.email,
       role: role,
       createdAt: new Date().toISOString(),
       emailVerified: false
-    });
+    };
+    console.log("Attempting to save to Firestore:", userData);
+    await setDoc(userDocRef, userData);
+    console.log("Firestore save successful");
     addLog(`User role "${role}" stored for ${user.email}`);
-    console.log(`[auth.js] Role saved: ${role}`);
     
+    // 4. Sign out until email is verified
     await signOut(auth);
   } catch (error) {
+    console.error("Registration error details:", error);
     let errorMsg = "Registration failed. ";
     if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
     else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
