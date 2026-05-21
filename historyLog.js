@@ -1,4 +1,4 @@
-// historyLog.js - Student Quiz History Log
+// js/historyLog.js - Student Quiz History Log
 import { auth, db } from './firebase-config.js';
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
