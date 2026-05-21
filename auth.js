@@ -1,9 +1,9 @@
 import { auth } from './firebase-config.js';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  GoogleAuthProvider, 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  GoogleAuthProvider,
   signInWithPopup,
   sendEmailVerification
 } from "firebase/auth";
@@ -65,6 +65,7 @@ export async function handleRegister(email, password, role = "student") {
     await sendEmailVerification(user);
     showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
     addLog(`Verification email sent to ${user.email}`);
+    // Save role to Firestore – this is critical
     await setDoc(doc(db, "users", user.uid), {
       email: user.email,
       role: role,
@@ -109,7 +110,6 @@ export async function handleGoogleSignIn() {
     let msg = "Google sign-in failed. ";
     if (err.code === 'auth/popup-blocked') msg += "Pop‑up blocked. Please allow pop‑ups.";
     else if (err.code === 'auth/unauthorized-domain') msg += "Domain not authorized in Firebase.";
-    else if (err.code === 'auth/cancelled-popup-request') msg += "Sign-in cancelled.";
     else msg += err.message;
     showAuthMessage(msg, false);
     addLog(`Google sign-in error: ${err.code}`);
