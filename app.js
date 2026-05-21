@@ -14,33 +14,37 @@ let currentUserRole = null;
 
 window.questionBank = questionBank;
 
-// Manual role fix tool (run in console if needed)
+// Helper to set role (useful for debugging, but also used as fallback)
 window.setUserRole = async (role) => {
   const user = auth.currentUser;
   if (!user) { alert("Not logged in"); return; }
-  const userDocRef = doc(db, "users", user.uid);
-  await setDoc(userDocRef, { role: role }, { merge: true });
-  console.log(`Role set to ${role}`);
-  alert(`Role updated to ${role}. Refresh page.`);
-  location.reload();
+  await setDoc(doc(db, "users", user.uid), { role: role }, { merge: true });
+  console.log(`Role set to ${role} for ${user.email}`);
+  alert(`Role updated to ${role}. Refresh to see changes.`);
 };
 
-// Function to get user role with retry
-async function getUserRoleWithRetry(uid, retries = 3, delay = 500) {
-  const userDocRef = doc(db, "users", uid);
-  console.log(`Checking document: users/${uid}`);
-  for (let i = 0; i < retries; i++) {
-    const docSnap = await getDoc(userDocRef);
-    if (docSnap.exists()) {
-      const role = docSnap.data().role;
+// Function to fetch role with retries and fallback
+async function getUserRole(userId, email) {
+  const docRef = doc(db, "users", userId);
+  for (let i = 0; i < 10; i++) { // Try up to 10 times
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const role = snap.data().role;
       console.log(`Role found: ${role}`);
       return role;
     }
-    console.log(`Attempt ${i+1}: Document not found, waiting ${delay}ms...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
+    console.log(`Attempt ${i+1}: Document not found, waiting 300ms...`);
+    await new Promise(r => setTimeout(r, 300));
   }
-  console.warn("Document not found after retries");
-  return null;
+  // If still not found, create the document using email (default student)
+  console.warn("No document after retries. Creating default student role.");
+  await setDoc(docRef, {
+    email: email,
+    role: "student",
+    createdAt: new Date().toISOString(),
+    emailVerified: true
+  });
+  return "student";
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -94,9 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     await joinQuizByCode(code);
   });
 
-  // Teacher dashboard placeholder
+  // Teacher dashboard (placeholder)
   el("teacherDashboardBtn")?.addEventListener('click', () => {
-    alert("Teacher dashboard – coming soon");
+    alert("Teacher dashboard – view quiz results");
   });
 
   // Student history button
@@ -156,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.requestFullscreen().catch(console.error);
   });
 
-  // Auth state listener with retry
+  // Auth state listener with robust role fetching
   onAuthStateChanged(auth, async (user) => {
     console.log("Auth state changed, user:", user?.email || "null");
     if (user) {
@@ -165,20 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await signOut(auth);
         return;
       }
-      // Wait a moment for Firestore to be ready
-      await new Promise(resolve => setTimeout(resolve, 300));
-      let role = await getUserRoleWithRetry(user.uid, 5, 500);
-      if (!role) {
-        console.warn("No role found, creating default student role");
-        const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, {
-          email: user.email,
-          role: "student",
-          createdAt: new Date().toISOString(),
-          emailVerified: true
-        });
-        role = "student";
-      }
+      // Get role with retries and fallback
+      const role = await getUserRole(user.uid, user.email);
       currentUserRole = role;
       console.log("Final role set to:", role);
 
