@@ -1,29 +1,7 @@
 import { auth, db } from './firebase-config.js';
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
-// Wait for DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-  // Close button
-  const closeBtn = document.getElementById('closeHistoryLog');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      const overlay = document.getElementById('historyLogOverlay');
-      if (overlay) overlay.style.display = 'none';
-    });
-  }
-
-  // Click outside to close
-  const overlay = document.getElementById('historyLogOverlay');
-  if (overlay) {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        overlay.style.display = 'none';
-      }
-    });
-  }
-});
-
-// Function to load history
+// Load history when the script runs
 async function loadHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
@@ -52,7 +30,7 @@ async function loadHistory() {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
       html += `
-        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
+        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
           <div style="display:flex; justify-content:space-between;">
             <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
             <span style="font-size:24px;">${data.score}/100</span>
@@ -74,6 +52,5 @@ function escapeHtml(str) {
   return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Load history when the overlay becomes visible (optional: load every time)
-// But we can load immediately
+// Load history immediately
 loadHistory();
