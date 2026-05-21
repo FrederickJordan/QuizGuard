@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // History Log Button Handler
   const historyLogBtn = document.getElementById("studentHistoryBtn");
   if (historyLogBtn) {
     historyLogBtn.addEventListener('click', () => {
@@ -64,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Auth state listener
   onAuthStateChanged(auth, async (user) => {
     console.log("Auth state changed, user =", user ? user.email : "null");
     if (user) {
