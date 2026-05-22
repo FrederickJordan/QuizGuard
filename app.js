@@ -14,13 +14,11 @@ let currentUserRole = null;
 
 window.questionBank = questionBank;
 
-// Helper to escape HTML
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-// Get role with retries (handles Firestore propagation delay)
 async function getUserRole(userId, email) {
   const docRef = doc(db, "users", userId);
   for (let i = 0; i < 20; i++) {
@@ -38,48 +36,36 @@ async function getUserRole(userId, email) {
   return "student";
 }
 
-// ========== STUDENT HISTORY (client‑side sort, no index) ==========
 async function loadStudentHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
-
   const user = auth.currentUser;
   if (!user) {
     container.innerHTML = `<div style="text-align:center; padding:40px;">Please log in to view history.</div>`;
     return;
   }
-
   try {
-    const q = query(
-      collection(db, "quizResults"),
-      where("userId", "==", user.uid)
-    );
+    const q = query(collection(db, "quizResults"), where("userId", "==", user.uid));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
       container.innerHTML = `<div style="text-align:center; padding:40px;">No quiz history found.</div>`;
       return;
     }
-
     const results = [];
-    snapshot.forEach(doc => {
-      results.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
     let html = '';
     results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
-      html += `
-        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
-          <div style="display:flex; justify-content:space-between;">
-            <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
-            <span style="font-size:24px;">${data.score}/100</span>
-          </div>
-          <div style="color:#64748b; font-size:13px;">${date}</div>
-          <div>Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+      html += `<div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
+        <div style="display:flex; justify-content:space-between;">
+          <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
+          <span style="font-size:24px;">${data.score}/100</span>
         </div>
-      `;
+        <div style="color:#64748b; font-size:13px;">${date}</div>
+        <div>Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+      </div>`;
     });
     container.innerHTML = html;
   } catch (err) {
@@ -88,56 +74,26 @@ async function loadStudentHistory() {
   }
 }
 
-// ========== TEACHER DASHBOARD (client‑side sort, no index) ==========
 async function showTeacherDashboard() {
   const teacherUid = auth.currentUser?.uid;
-  if (!teacherUid) {
-    alert("Not logged in as teacher.");
-    return;
-  }
-
+  if (!teacherUid) { alert("Not logged in as teacher."); return; }
   const container = document.getElementById("teacherResultsContainer");
   const overlay = document.getElementById("teacherResultsOverlay");
   if (!container || !overlay) return;
-
   overlay.style.display = "block";
   container.innerHTML = '<p style="text-align: center; padding: 40px;">Loading results...</p>';
-
   try {
     const codesQuery = query(collection(db, "quizCodes"), where("creatorUid", "==", teacherUid));
     const codesSnap = await getDocs(codesQuery);
-    if (codesSnap.empty) {
-      container.innerHTML = '<p style="text-align: center; padding: 40px;">No quizzes published yet.</p>';
-      return;
-    }
-
+    if (codesSnap.empty) { container.innerHTML = '<p style="text-align: center; padding: 40px;">No quizzes published yet.</p>'; return; }
     const codeList = codesSnap.docs.map(doc => doc.data().code);
     const resultsQuery = query(collection(db, "quizResults"), where("code", "in", codeList));
     const resultsSnap = await getDocs(resultsQuery);
-
-    if (resultsSnap.empty) {
-      container.innerHTML = '<p style="text-align: center; padding: 40px;">No student results yet.</p>';
-      return;
-    }
-
+    if (resultsSnap.empty) { container.innerHTML = '<p style="text-align: center; padding: 40px;">No student results yet.</p>'; return; }
     const results = [];
-    resultsSnap.forEach(doc => {
-      results.push({ id: doc.id, ...doc.data() });
-    });
+    resultsSnap.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    let html = '<table style="width:100%; border-collapse: collapse; text-align: left;">';
-    html += `<thead><tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0;">
-      <th style="padding: 12px;">Student</th>
-      <th style="padding: 12px;">Code</th>
-      <th style="padding: 12px;">Subject</th>
-      <th style="padding: 12px;">Score</th>
-      <th style="padding: 12px;">Penalties</th>
-      <th style="padding: 12px;">Tab Switches</th>
-      <th style="padding: 12px;">Date</th>
-      <th style="padding: 12px;">Details</th>
-    <tr></thead><tbody>`;
-
+    let html = '<table style="width:100%; border-collapse: collapse; text-align: left;"><thead><tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0;"><th style="padding: 12px;">Student</th><th style="padding: 12px;">Code</th><th style="padding: 12px;">Subject</th><th style="padding: 12px;">Score</th><th style="padding: 12px;">Penalties</th><th style="padding: 12px;">Tab Switches</th><th style="padding: 12px;">Date</th><th style="padding: 12px;">Details</th></tr></thead><tbody>';
     results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
@@ -150,23 +106,16 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
         <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
-      </tr>`;
+       </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
-
     document.querySelectorAll('.viewResultDetails').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const resultId = btn.dataset.id;
-        const resultDoc = await getDoc(doc(db, "quizResults", resultId));
+        const resultDoc = await getDoc(doc(db, "quizResults", btn.dataset.id));
         if (resultDoc.exists()) {
           const data = resultDoc.data();
-          let wrongList = '';
-          if (data.wrongAnswers && data.wrongAnswers.length) {
-            wrongList = data.wrongAnswers.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n');
-          } else {
-            wrongList = 'None';
-          }
+          let wrongList = data.wrongAnswers?.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n') || 'None';
           alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${data.aiFeedback || 'None'}`);
         }
       });
@@ -177,7 +126,6 @@ async function showTeacherDashboard() {
   }
 }
 
-// ========== DOM CONTENT LOADED ==========
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
   const el = (id) => document.getElementById(id);
@@ -211,31 +159,24 @@ document.addEventListener('DOMContentLoaded', () => {
     else { errDiv.innerText = ""; await joinQuizByCode(code); }
   });
 
-  // Teacher dashboard
+  // Teacher dashboard and student history
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
-
-  // Student history
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
-    if (overlay) {
-      loadStudentHistory();
-      overlay.style.display = "block";
-    }
+    if (overlay) { loadStudentHistory(); overlay.style.display = "block"; }
   });
 
-  // Close buttons for overlays
+  // Close overlays
   const closeHistory = document.getElementById("closeHistoryLog");
   if (closeHistory) closeHistory.onclick = () => document.getElementById("historyLogOverlay").style.display = "none";
   const closeTeacher = document.getElementById("closeTeacherResults");
   if (closeTeacher) closeTeacher.onclick = () => document.getElementById("teacherResultsOverlay").style.display = "none";
-
-  // Click outside to close overlays
   const historyOverlay = document.getElementById("historyLogOverlay");
   if (historyOverlay) historyOverlay.addEventListener('click', (e) => { if (e.target === historyOverlay) historyOverlay.style.display = "none"; });
   const teacherOverlay = document.getElementById("teacherResultsOverlay");
   if (teacherOverlay) teacherOverlay.addEventListener('click', (e) => { if (e.target === teacherOverlay) teacherOverlay.style.display = "none"; });
 
-  // Editor buttons (teacher only)
+  // Editor (teacher only)
   el("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") return alert("Only teachers can edit questions.");
     renderSubjectsList();
@@ -257,78 +198,89 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fullscreen continue
   el("pauseOverlayContinue")?.addEventListener('click', () => document.documentElement.requestFullscreen());
 
-  // ========== TUTORIAL CAROUSEL ==========
+  // ========== HOW TO PLAY POPUP ==========
+  const howToPlayBtn = document.getElementById('howToPlayBtn');
+  const popup = document.getElementById('howToPlayPopup');
+  const closePopup = document.getElementById('closeHowToPlay');
+  const popupImage = document.getElementById('popupImage');
+  const popupCaption = document.getElementById('popupCaption');
+  const popupPrev = document.getElementById('popupPrev');
+  const popupNext = document.getElementById('popupNext');
+  const popupTabFtb = document.getElementById('popupTabFtb');
+  const popupTabQte = document.getElementById('popupTabQte');
+
   const ftbImages = ['ftb1.png', 'ftb2.png', 'ftb3.png', 'ftb4.png'];
-  const ftbCaptions = ['Step 1: The cups appear with the ball hidden under one cup.', 'Step 2: Hover over a cup – you can see the ball.', 'Step 3: Click the correct cup before the gauge empties!', 'Step 4: After a correct click, the ball moves to a new random cup and the gauge refills.'];
+  const ftbCaptions = [
+    'Step 1: The cups appear with the ball hidden under one cup.',
+    'Step 2: Hover over a cup – you can see the ball.',
+    'Step 3: Click the correct cup before the gauge empties!',
+    'Step 4: After a correct click, the ball moves to a new random cup and the gauge refills.'
+  ];
   const qteImages = ['qte1.png', 'qte2.png', 'qte3.png'];
-  const qteCaptions = ['Step 1: The QTE gauge appears with a random target key.', 'Step 2: Press the correct key – the gauge increases by 35%.', 'Step 3: Keep pressing correct keys to keep the gauge full and avoid penalties.'];
+  const qteCaptions = [
+    'Step 1: The QTE gauge appears with a random target key.',
+    'Step 2: Press the correct key – the gauge increases by 35%.',
+    'Step 3: Keep pressing correct keys to keep the gauge full and avoid penalties.'
+  ];
 
-  let ftbIndex = 0;
-  let qteIndex = 0;
+  let currentGame = 'ftb';
+  let currentIndex = 0;
 
-  function updateFtbCarousel() {
-    const img = document.getElementById('ftbImage');
-    const cap = document.getElementById('ftbCaption');
-    if (img) img.src = ftbImages[ftbIndex];
-    if (cap) cap.textContent = ftbCaptions[ftbIndex];
-  }
-  function updateQteCarousel() {
-    const img = document.getElementById('qteImage');
-    const cap = document.getElementById('qteCaption');
-    if (img) img.src = qteImages[qteIndex];
-    if (cap) cap.textContent = qteCaptions[qteIndex];
-  }
-
-  const tabFtb = document.getElementById('tabFtb');
-  const tabQte = document.getElementById('TabQte');
-  const ftbCarousel = document.getElementById('ftbCarousel');
-  const qteCarousel = document.getElementById('qteCarousel');
-
-  if (tabFtb && tabQte && ftbCarousel && qteCarousel) {
-    tabFtb.addEventListener('click', () => {
-      tabFtb.classList.add('active');
-      tabQte.classList.remove('active');
-      ftbCarousel.style.display = 'block';
-      qteCarousel.style.display = 'none';
-    });
-    tabQte.addEventListener('click', () => {
-      tabQte.classList.add('active');
-      tabFtb.classList.remove('active');
-      qteCarousel.style.display = 'block';
-      ftbCarousel.style.display = 'none';
-    });
+  function updatePopupContent() {
+    if (currentGame === 'ftb') {
+      popupImage.src = ftbImages[currentIndex];
+      popupCaption.textContent = ftbCaptions[currentIndex];
+    } else {
+      popupImage.src = qteImages[currentIndex];
+      popupCaption.textContent = qteCaptions[currentIndex];
+    }
   }
 
-  const ftbPrev = document.querySelector('.carousel-prev[data-carousel="ftb"]');
-  const ftbNext = document.querySelector('.carousel-next[data-carousel="ftb"]');
-  if (ftbPrev && ftbNext) {
-    ftbPrev.addEventListener('click', () => {
-      ftbIndex = (ftbIndex - 1 + ftbImages.length) % ftbImages.length;
-      updateFtbCarousel();
-    });
-    ftbNext.addEventListener('click', () => {
-      ftbIndex = (ftbIndex + 1) % ftbImages.length;
-      updateFtbCarousel();
-    });
+  function setActiveTab() {
+    if (currentGame === 'ftb') {
+      popupTabFtb.classList.add('active');
+      popupTabQte.classList.remove('active');
+    } else {
+      popupTabQte.classList.add('active');
+      popupTabFtb.classList.remove('active');
+    }
   }
 
-  const qtePrev = document.querySelector('.carousel-prev[data-carousel="qte"]');
-  const qteNext = document.querySelector('.carousel-next[data-carousel="qte"]');
-  if (qtePrev && qteNext) {
-    qtePrev.addEventListener('click', () => {
-      qteIndex = (qteIndex - 1 + qteImages.length) % qteImages.length;
-      updateQteCarousel();
-    });
-    qteNext.addEventListener('click', () => {
-      qteIndex = (qteIndex + 1) % qteImages.length;
-      updateQteCarousel();
+  if (howToPlayBtn && popup) {
+    howToPlayBtn.addEventListener('click', () => {
+      currentGame = 'ftb';
+      currentIndex = 0;
+      updatePopupContent();
+      setActiveTab();
+      popup.style.display = 'block';
     });
   }
+  if (closePopup) closePopup.addEventListener('click', () => popup.style.display = 'none');
+  if (popupPrev) popupPrev.addEventListener('click', () => {
+    const maxIndex = (currentGame === 'ftb') ? ftbImages.length - 1 : qteImages.length - 1;
+    currentIndex = (currentIndex - 1 + maxIndex + 1) % (maxIndex + 1);
+    updatePopupContent();
+  });
+  if (popupNext) popupNext.addEventListener('click', () => {
+    const maxIndex = (currentGame === 'ftb') ? ftbImages.length - 1 : qteImages.length - 1;
+    currentIndex = (currentIndex + 1) % (maxIndex + 1);
+    updatePopupContent();
+  });
+  if (popupTabFtb) popupTabFtb.addEventListener('click', () => {
+    currentGame = 'ftb';
+    currentIndex = 0;
+    updatePopupContent();
+    setActiveTab();
+  });
+  if (popupTabQte) popupTabQte.addEventListener('click', () => {
+    currentGame = 'qte';
+    currentIndex = 0;
+    updatePopupContent();
+    setActiveTab();
+  });
+  if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) popup.style.display = 'none'; });
 
-  updateFtbCarousel();
-  updateQteCarousel();
-
-  // Auth state listener
+  // ========== AUTH STATE LISTENER ==========
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       if (!user.emailVerified) {
@@ -340,12 +292,10 @@ document.addEventListener('DOMContentLoaded', () => {
       currentUserRole = role;
       await loadQuestionBankFromFirestore();
       updateSubjectDropdowns();
-
       const editorBtn = el("openEditorBtn");
       const teacherDashboardBtn = el("teacherDashboardBtn");
       if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
       if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
-
       el("authScreen").style.display = "none";
       el("appContainer").style.display = "block";
     } else {
