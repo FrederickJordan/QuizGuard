@@ -3,7 +3,7 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -23,7 +23,7 @@ function escapeHtml(str) {
 // Get role with retries (handles Firestore propagation delay)
 async function getUserRole(userId, email) {
   const docRef = doc(db, "users", userId);
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 20; i++) {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const role = snap.data().role;
@@ -36,6 +36,52 @@ async function getUserRole(userId, email) {
   console.warn("❌ No document after retries. Creating default student role.");
   await setDoc(docRef, { email, role: "student", createdAt: new Date().toISOString() });
   return "student";
+}
+
+// ========== STUDENT HISTORY (embedded from historyLog.js) ==========
+async function loadStudentHistory() {
+  const container = document.getElementById('historyLogContainer');
+  if (!container) return;
+
+  const user = auth.currentUser;
+  if (!user) {
+    container.innerHTML = `<div style="text-align:center; padding:40px;">Please log in to view history.</div>`;
+    return;
+  }
+
+  try {
+    const q = query(
+      collection(db, "quizResults"),
+      where("userId", "==", user.uid),
+      orderBy("timestamp", "desc")
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      container.innerHTML = `<div style="text-align:center; padding:40px;">No quiz history found.</div>`;
+      return;
+    }
+
+    let html = '';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const date = new Date(data.timestamp).toLocaleString();
+      const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
+      html += `
+        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
+            <span style="font-size:24px;">${data.score}/100</span>
+          </div>
+          <div style="color:#64748b; font-size:13px;">${date}</div>
+          <div>Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  } catch (err) {
+    console.error("Error loading student history:", err);
+    container.innerHTML = `<div style="text-align:center; padding:40px;">Error loading history.</div>`;
+  }
 }
 
 // ========== TEACHER DASHBOARD (no index required) ==========
@@ -104,7 +150,7 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
         <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
-      </td>`;
+      </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -166,13 +212,17 @@ document.addEventListener('DOMContentLoaded', () => {
     else { errDiv.innerText = ""; await joinQuizByCode(code); }
   });
 
-  // Teacher dashboard (real implementation)
+  // Teacher dashboard
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
 
-  // Student history
+  // Student history – open overlay and load history
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
-    if (overlay) overlay.style.display = "block";
+    if (overlay) {
+      // Load history every time the overlay is opened
+      loadStudentHistory();
+      overlay.style.display = "block";
+    }
   });
 
   // Close buttons for overlays
