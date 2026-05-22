@@ -25,7 +25,7 @@ export function showAuthMessage(message, isSuccess = false) {
   msgDiv.className = `auth-message ${isSuccess ? 'success' : 'error'}`;
   msgDiv.style.display = 'block';
   if (isSuccess) {
-    setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
+    setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
   }
 }
 
@@ -75,7 +75,7 @@ export async function handleRegister(email, password, role = "student") {
     const user = userCredential.user;
     const userDocRef = doc(db, "users", user.uid);
 
-    // Must finish while still signed in (Firestore rules usually require auth)
+    // Save role to Firestore while user is signed in
     await setDoc(
       userDocRef,
       {
@@ -87,9 +87,11 @@ export async function handleRegister(email, password, role = "student") {
       { merge: true }
     );
 
+    // Verify the role was saved correctly
     const verifySnap = await getDoc(userDocRef);
     const savedRole = verifySnap.data()?.role;
     console.log(`[Register] Firestore role after save: "${savedRole}"`);
+    
     if (savedRole !== normalizedRole) {
       throw new Error(
         `Could not save ${normalizedRole} role (Firestore has "${savedRole || 'none'}"). Check Firestore security rules.`
@@ -97,12 +99,21 @@ export async function handleRegister(email, password, role = "student") {
     }
 
     addLog(`User role "${normalizedRole}" stored for ${user.email}`);
+    
+    // Send verification email
     await sendEmailVerification(user);
+    
+    // Sign out so user must verify email before logging in
+    // This is IMPORTANT - we sign out AFTER verification email is sent
+    // but we need to do it BEFORE clearing isRegistering flag
+    await signOut(auth);
+    
     showAuthMessage(
-      `Account created as ${normalizedRole}. Verify your email, then log in.`,
+      `Account created as ${normalizedRole}. Verification email sent to ${email}. Please verify your email, then log in.`,
       true
     );
     addLog(`Verification email sent to ${user.email}`);
+    
   } catch (error) {
     let errorMsg = "Registration failed. ";
     if (error.code === 'auth/email-already-in-use') {
@@ -113,9 +124,13 @@ export async function handleRegister(email, password, role = "student") {
     showAuthMessage(errorMsg, false);
     addLog(`Registration error: ${error?.code || error.message}`);
     console.error('[Register] failed:', error);
+    
+    // Only sign out if there was an error and user exists
+    if (auth.currentUser) {
+      await signOut(auth);
+    }
   } finally {
     isRegistering = false;
-    if (auth.currentUser) await signOut(auth);
   }
 }
 
