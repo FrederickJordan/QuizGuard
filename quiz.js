@@ -52,6 +52,16 @@ function clearAiFeedback() {
   feedbackBox.innerHTML = "";
 }
 
+function buildManualFeedback(wrongAnswers) {
+  let feedback = "📝 Review Your Mistakes\n\n";
+  wrongAnswers.forEach((wa, i) => {
+    feedback += `${i+1}. ${wa.question}\n`;
+    feedback += `   ❌ Your answer: ${wa.selectedAnswer}\n`;
+    feedback += `   ✅ Correct: ${wa.correctAnswer}\n\n`;
+  });
+  return feedback;
+}
+
 async function requestAiFeedback(wrongAnswers) {
   const WORKER_URL = "https://quizguardslave.17fjsetiawan.workers.dev";
   
@@ -78,14 +88,7 @@ async function requestAiFeedback(wrongAnswers) {
     
   } catch (error) {
     console.error("❌ AI fetch error:", error);
-    
-    let fallbackFeedback = `📝 Review Your Mistakes\n\n`;
-    wrongAnswers.forEach((wa, i) => {
-      fallbackFeedback += `${i+1}. ${wa.question}\n`;
-      fallbackFeedback += `   ❌ Your answer: ${wa.selectedAnswer}\n`;
-      fallbackFeedback += `   ✅ Correct: ${wa.correctAnswer}\n\n`;
-    });
-    return fallbackFeedback;
+    return buildManualFeedback(wrongAnswers);
   }
 }
 
@@ -129,15 +132,19 @@ export function failCurrentQuestion(reason) {
   const correctAnswerText = currentQ.answers[currentQ.correct];
   console.log(`   Correct answer: ${correctAnswerText}`);
   
-  // Add to wrong answers array for AI analysis
-  wrongAnswers.push({
+  // IMPORTANT: Always add to wrongAnswers array for AI analysis
+  // This must happen BEFORE moving to next question
+  const wrongAnswerEntry = {
     question: currentQ.question,
     selectedAnswer: `[FAILED - ${reason}]`,
     correctAnswer: correctAnswerText
-  });
+  };
+  
+  wrongAnswers.push(wrongAnswerEntry);
   
   console.log(`   ✅ Added to wrongAnswers. Total wrongAnswers now: ${wrongAnswers.length}`);
-  addLog(`❌ Question failed: ${reason} - Added to wrongAnswers`);
+  console.log(`   Wrong answer entry:`, wrongAnswerEntry);
+  addLog(`❌ Question failed: ${reason} - Added to wrongAnswers (total: ${wrongAnswers.length})`);
   
   // Move to next question
   currentQuestion++;
@@ -149,6 +156,7 @@ export function failCurrentQuestion(reason) {
     loadQuestion();
   } else if (currentQuestion >= questions.length) {
     console.log(`   Quiz complete, calling endQuiz...`);
+    console.log(`   Final wrongAnswers count: ${wrongAnswers.length}`);
     endQuiz();
   }
 }
@@ -261,6 +269,7 @@ export function loadQuestion() {
 
   if (currentQuestion >= questions.length) {
     console.log(`   Quiz complete, calling endQuiz...`);
+    console.log(`   Final wrongAnswers count before endQuiz: ${wrongAnswers.length}`);
     endQuiz();
     return;
   }
@@ -308,6 +317,7 @@ export function loadQuestion() {
           selectedAnswer: answerOptions[selectedAnswerIndex].text,
           correctAnswer: answerOptions[correctIndex].text
         });
+        console.log(`   Wrong answer added via submit. Total: ${wrongAnswers.length}`);
       }
       updateStats();
       currentQuestion++;
@@ -329,6 +339,7 @@ export async function endQuiz() {
   getEl("finalTabs").textContent = tabSwitches;
 
   console.log(`🎯 Quiz ended. Wrong answers count: ${wrongAnswers.length}`);
+  console.log(`   Wrong answers list:`, wrongAnswers);
   
   let aiFeedbackText = "";
   if (wrongAnswers.length > 0) {
@@ -344,16 +355,20 @@ export async function endQuiz() {
       showAiFeedback(aiFeedbackText);
     } catch (error) {
       console.error("AI failed:", error);
-      showAiFeedback(`📝 Review Your Mistakes\n\n${wrongAnswers.map((wa, i) => 
-        `${i+1}. Correct answer: ${wa.correctAnswer}\n`
-      ).join('\n')}`);
+      showAiFeedback(buildManualFeedback(wrongAnswers));
     }
   } else {
-    showAiFeedback("🎉 PERFECT SCORE! 🎉\n\nExcellent work!");
+    // Only show perfect score if truly no wrong answers AND score is 100
+    if (Math.floor(score) === 100) {
+      showAiFeedback("🎉 PERFECT SCORE! 🎉\n\nExcellent work! You answered every question correctly.");
+    } else {
+      // This case should not happen, but just in case
+      showAiFeedback("📝 Quiz completed. No wrong answers were recorded, but the score isn't perfect. Please contact support if you believe this is an error.");
+    }
   }
   
   await saveQuizResults();
-  addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
+  addLog(`Quiz finished. Score: ${Math.floor(score)}/100, Wrong answers: ${wrongAnswers.length}`);
 }
 
 export function returnToHome() {
