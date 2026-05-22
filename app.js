@@ -522,29 +522,28 @@ document.addEventListener('DOMContentLoaded', () => {
   if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) popup.style.display = 'none'; });
 
   // Auth state listener
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      if (!user.emailVerified) {
-        // Don't sign out during register — that can cancel the role write to Firestore
-        if (isRegistering) return;
-        showAuthMessage("Please verify your email.", false);
-        await signOut(auth);
-        return;
-      }
-      const role = await getUserRole(user.uid, user.email);
-      currentUserRole = role;
-      await loadQuestionBankFromFirestore();
-      updateSubjectDropdowns();
-      const editorBtn = el("openEditorBtn");
-      const teacherDashboardBtn = el("teacherDashboardBtn");
-      if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
-      if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
-      el("authScreen").style.display = "none";
-      el("appContainer").style.display = "block";
-    } else {
-      window.questionBank = getDefaultQuestionBank();
-      el("authScreen").style.display = "flex";
-      el("appContainer").style.display = "none";
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    if (!user.emailVerified) {
+      // Don't sign out during register — that can cancel the role write to Firestore
+      if (isRegistering) return;
+      showAuthMessage("Please verify your email.", false);
+      await signOut(auth);
+      return;
     }
-  });
+    const role = await getUserRole(user.uid, user.email);
+    currentUserRole = role;
+    await loadQuestionBankFromFirestore();
+    updateSubjectDropdowns();
+    const editorBtn = el("openEditorBtn");
+    const teacherDashboardBtn = el("teacherDashboardBtn");
+    if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
+    if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
+    el("authScreen").style.display = "none";
+    el("appContainer").style.display = "block";
+  } else {
+    window.questionBank = getDefaultQuestionBank();
+    el("authScreen").style.display = "flex";
+    el("appContainer").style.display = "none";
+  }
 });
