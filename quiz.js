@@ -3,7 +3,7 @@ import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
 import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
 import { db, auth } from './firebase-config.js';
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 
 let questions = [];
 let currentQuestion = 0;
@@ -35,14 +35,20 @@ function clearAiFeedback() {
 }
 
 async function requestAiFeedback(wrongAnswers) {
-  const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wrongAnswers })
-  });
-  if (!response.ok) throw new Error(`AI endpoint error ${response.status}`);
-  const data = await response.json();
-  return data.feedback || "AI feedback unavailable.";
+  if (!wrongAnswers || wrongAnswers.length === 0) return "";
+  try {
+    const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wrongAnswers })
+    });
+    if (!response.ok) throw new Error(`AI endpoint error ${response.status}`);
+    const data = await response.json();
+    return data.feedback || "AI feedback is unavailable right now.";
+  } catch (err) {
+    console.error("AI feedback error:", err);
+    return "AI feedback temporarily unavailable.";
+  }
 }
 
 export function updateStats() {
@@ -66,10 +72,9 @@ export function failCurrentQuestion(reason) {
   addLog(`Question failed: ${reason}`);
 }
 
-async function saveQuizResults() {
+async function saveQuizResults(aiFeedbackText) {
   const user = auth.currentUser;
   if (!user) return;
-  const aiFeedbackText = getEl("aiFeedbackResults")?.textContent || "";
   await addDoc(collection(db, "quizResults"), {
     userId: user.uid,
     userEmail: user.email,
@@ -84,7 +89,7 @@ async function saveQuizResults() {
     aiFeedback: aiFeedbackText,
     timestamp: new Date().toISOString()
   });
-  addLog("Quiz results saved.");
+  addLog("Quiz results saved to Firestore.");
 }
 
 function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = null, difficulty = null) {
@@ -241,19 +246,23 @@ export async function endQuiz() {
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
 
+  // Show AI feedback on the results screen
   let aiFeedbackText = "";
   if (wrongAnswers.length > 0) {
     showAiFeedback("Generating AI feedback for your incorrect answers...");
     try {
       aiFeedbackText = await requestAiFeedback(wrongAnswers);
       showAiFeedback(aiFeedbackText);
-    } catch {
+    } catch (err) {
       showAiFeedback("Unable to fetch AI feedback right now.");
+      aiFeedbackText = "AI feedback unavailable.";
     }
   } else {
     clearAiFeedback();
   }
-  await saveQuizResults();
+
+  // Save results to Firestore
+  await saveQuizResults(aiFeedbackText);
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
