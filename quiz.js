@@ -106,31 +106,49 @@ export function applyPenalty(reason) {
 }
 
 export function failCurrentQuestion(reason) {
-  if (currentQuestion >= questions.length) return;
+  console.log(`🔴 failCurrentQuestion called with reason: ${reason}`);
+  console.log(`   currentQuestion: ${currentQuestion}, questions length: ${questions.length}`);
+  
+  if (currentQuestion >= questions.length) {
+    console.log(`   ❌ currentQuestion out of range, returning`);
+    return;
+  }
   
   const currentQ = questions[currentQuestion];
+  console.log(`   Current question:`, currentQ?.question);
+  
+  if (!currentQ) {
+    console.log(`   ❌ No current question found!`);
+    return;
+  }
   
   // Record the failure
   failures++;
   
-  // CRITICAL: Add to wrongAnswers array for AI analysis
-  if (currentQ) {
-    const correctAnswerText = currentQ.answers[currentQ.correct];
-    wrongAnswers.push({
-      question: currentQ.question,
-      selectedAnswer: `[FAILED - ${reason}]`,
-      correctAnswer: correctAnswerText
-    });
-    addLog(`❌ Question failed: ${reason} - Added to wrongAnswers`);
-  }
+  // Get correct answer text
+  const correctAnswerText = currentQ.answers[currentQ.correct];
+  console.log(`   Correct answer: ${correctAnswerText}`);
+  
+  // Add to wrong answers array for AI analysis
+  wrongAnswers.push({
+    question: currentQ.question,
+    selectedAnswer: `[FAILED - ${reason}]`,
+    correctAnswer: correctAnswerText
+  });
+  
+  console.log(`   ✅ Added to wrongAnswers. Total wrongAnswers now: ${wrongAnswers.length}`);
+  addLog(`❌ Question failed: ${reason} - Added to wrongAnswers`);
   
   // Move to next question
   currentQuestion++;
+  console.log(`   Moved to next question: ${currentQuestion}`);
   
-  // Load next question if quiz still active
+  // Load next question if quiz is still active
   if (quizActive && currentQuestion < questions.length) {
+    console.log(`   Loading next question...`);
     loadQuestion();
   } else if (currentQuestion >= questions.length) {
+    console.log(`   Quiz complete, calling endQuiz...`);
     endQuiz();
   }
 }
