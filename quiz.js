@@ -257,8 +257,10 @@ export async function joinQuizByCode(code) {
 }
 
 export function loadQuestion() {
-  // Check if quiz is complete
+  console.log(`📖 loadQuestion called, currentQuestion: ${currentQuestion}, questions.length: ${questions.length}`);
+
   if (currentQuestion >= questions.length) {
+    console.log(`   Quiz complete, calling endQuiz...`);
     endQuiz();
     return;
   }
