@@ -8,6 +8,7 @@ import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } f
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
 import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
+import { openTutorial } from './tutorial.js';
 
 const db = getFirestore();
 let currentUserRole = null;
@@ -168,6 +169,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
+  
+  // TUTORIAL
+  el("tutorialBtn")?.addEventListener('click', () => {
+    import('./tutorial.js').then(module => {
+      module.openTutorial(false);
+    });
+  });
 
   // Close buttons for overlays
   const closeHistory = document.getElementById("closeHistoryLog");
@@ -181,6 +189,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const teacherOverlay = document.getElementById("teacherResultsOverlay");
   if (teacherOverlay) teacherOverlay.addEventListener('click', (e) => { if (e.target === teacherOverlay) teacherOverlay.style.display = "none"; });
 
+// TUTORIAL close
+  const closeTutorialBtn = document.getElementById("closeTutorial");
+  if (closeTutorialBtn) {
+    closeTutorialBtn.addEventListener('click', () => {
+      document.getElementById('tutorialModal').style.display = 'none';
+    });
+  }
+
+  const closeTutorialModalBtn = document.getElementById("closeTutorialBtn");
+  if (closeTutorialModalBtn) {
+    closeTutorialModalBtn.addEventListener('click', () => {
+      document.getElementById('tutorialModal').style.display = 'none';
+    });
+  }
+
+  const tutorialModal = document.getElementById("tutorialModal");
+  if (tutorialModal) {
+    tutorialModal.addEventListener('click', (e) => {
+      if (e.target === tutorialModal) {
+        tutorialModal.style.display = 'none';
+      }
+    });
+  }
+  
   // Editor buttons (teacher only)
   el("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") return alert("Only teachers can edit questions.");
