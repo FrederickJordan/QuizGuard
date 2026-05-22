@@ -107,9 +107,32 @@ export function applyPenalty(reason) {
 
 export function failCurrentQuestion(reason) {
   if (currentQuestion >= questions.length) return;
+  
+  const currentQ = questions[currentQuestion];
+  
+  // Record the failure
   failures++;
-  pendingFailure = true;
-  addLog(`Question failed: ${reason}`);
+  
+  // Add to wrong answers array for AI analysis
+  if (currentQ) {
+    const correctAnswerText = currentQ.answers[currentQ.correct];
+    wrongAnswers.push({
+      question: currentQ.question,
+      selectedAnswer: `[FAILED - ${reason}]`,
+      correctAnswer: correctAnswerText
+    });
+    addLog(`❌ Question failed: ${reason}`);
+  }
+  
+  // Move to next question
+  currentQuestion++;
+  
+  // Load next question if quiz is still active
+  if (quizActive && currentQuestion < questions.length) {
+    loadQuestion();
+  } else if (currentQuestion >= questions.length) {
+    endQuiz();
+  }
 }
 
 async function saveQuizResults() {
@@ -216,14 +239,12 @@ export async function joinQuizByCode(code) {
 }
 
 export function loadQuestion() {
-  if (pendingFailure) {
-    pendingFailure = false;
-    currentQuestion++;
-  }
+  // Check if quiz is complete
   if (currentQuestion >= questions.length) {
     endQuiz();
     return;
   }
+  
   selectedAnswerIndex = null;
   clearAiFeedback();
   const q = questions[currentQuestion];
