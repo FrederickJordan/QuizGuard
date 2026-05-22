@@ -14,6 +14,29 @@ let currentUserRole = null;
 
 window.questionBank = questionBank;
 
+window.setUserRole = async (newRole) => {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("No user logged in.");
+    return;
+  }
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, { role: newRole }, { merge: true });
+    currentUserRole = newRole;
+    // Re-apply UI based on new role
+    const editorBtn = document.getElementById("openEditorBtn");
+    const teacherDashboardBtn = document.getElementById("teacherDashboardBtn");
+    if (editorBtn) editorBtn.style.display = newRole === "teacher" ? "inline-block" : "none";
+    if (teacherDashboardBtn) teacherDashboardBtn.style.display = newRole === "teacher" ? "inline-block" : "none";
+    alert(`Role set to ${newRole}. Refresh page to fully reload.`);
+    console.log(`Role updated to ${newRole} for ${user.email}`);
+  } catch (err) {
+    console.error("Failed to set role:", err);
+    alert("Error setting role. Check console.");
+  }
+};
+
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
