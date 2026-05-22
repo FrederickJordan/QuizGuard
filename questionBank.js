@@ -8,15 +8,8 @@ export function getDefaultQuestionBank() {
   return {
     math: {
       easy: [
-        { question: "What is 12 × 8?", answers: ["96", "88", "108", "84"], correct: 0 },
-        { question: "What is 15 + 27?", answers: ["42", "32", "52", "41"], correct: 0 },
-        { question: "What is 100 ÷ 4?", answers: ["25", "20", "30", "40"], correct: 0 },
-        { question: "What is the square root of 81?", answers: ["9", "7", "8", "10"], correct: 0 },
-        { question: "What is 7 × 6?", answers: ["42", "36", "48", "54"], correct: 0 },
-        { question: "What is 9 + 4 × 2?", answers: ["17", "26", "22", "13"], correct: 0 },
         { question: "What is 3²?", answers: ["9", "6", "8", "12"], correct: 0 },
         { question: "What is 50% of 200?", answers: ["100", "50", "150", "25"], correct: 0 },
-        { question: "What is the next prime after 7?", answers: ["11", "9", "13", "10"], correct: 0 },
         { question: "What is 0.5 as a fraction?", answers: ["1/2", "1/4", "3/4", "2/3"], correct: 0 }
       ],
       medium: [
