@@ -36,14 +36,17 @@ async function getUserRole(userId, email) {
   return "student";
 }
 
+// ========== STUDENT HISTORY (with AI feedback and wrong answers) ==========
 async function loadStudentHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
+
   const user = auth.currentUser;
   if (!user) {
     container.innerHTML = `<div style="text-align:center; padding:40px;">Please log in to view history.</div>`;
     return;
   }
+
   try {
     const q = query(collection(db, "quizResults"), where("userId", "==", user.uid));
     const snapshot = await getDocs(q);
@@ -51,29 +54,54 @@ async function loadStudentHistory() {
       container.innerHTML = `<div style="text-align:center; padding:40px;">No quiz history found.</div>`;
       return;
     }
+
     const results = [];
     snapshot.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     let html = '';
     results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
-      html += `<div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
-        <div style="display:flex; justify-content:space-between;">
-          <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
-          <span style="font-size:24px;">${data.score}/100</span>
+      html += `
+        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
+          <div style="display:flex; justify-content:space-between;">
+            <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
+            <span style="font-size:24px;">${data.score}/100</span>
+          </div>
+          <div style="color:#64748b; font-size:13px;">${date}</div>
+          <div style="margin: 8px 0;">Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+          <button class="viewStudentDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer; margin-top: 8px;">View Details</button>
         </div>
-        <div style="color:#64748b; font-size:13px;">${date}</div>
-        <div>Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
-      </div>`;
+      `;
     });
     container.innerHTML = html;
+
+    // Attach click handlers for "View Details" buttons
+    document.querySelectorAll('.viewStudentDetails').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const resultId = btn.dataset.id;
+        const resultDoc = await getDoc(doc(db, "quizResults", resultId));
+        if (resultDoc.exists()) {
+          const data = resultDoc.data();
+          let wrongList = '';
+          if (data.wrongAnswers && data.wrongAnswers.length) {
+            wrongList = data.wrongAnswers.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n');
+          } else {
+            wrongList = 'None';
+          }
+          const aiFeedback = data.aiFeedback ? data.aiFeedback : 'No AI feedback available.';
+          alert(`Quiz: ${data.subject || 'Quiz'}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${aiFeedback}`);
+        }
+      });
+    });
   } catch (err) {
     console.error("Error loading student history:", err);
     container.innerHTML = `<div style="text-align:center; padding:40px;">Error loading history.</div>`;
   }
 }
 
+// ========== TEACHER DASHBOARD (with AI feedback) ==========
 async function showTeacherDashboard() {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) { alert("Not logged in as teacher."); return; }
@@ -106,7 +134,7 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
         <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
-       </tr>`;
+      </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -116,7 +144,8 @@ async function showTeacherDashboard() {
         if (resultDoc.exists()) {
           const data = resultDoc.data();
           let wrongList = data.wrongAnswers?.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n') || 'None';
-          alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${data.aiFeedback || 'None'}`);
+          const aiFeedback = data.aiFeedback ? data.aiFeedback : 'No AI feedback available.';
+          alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${aiFeedback}`);
         }
       });
     });
@@ -126,6 +155,7 @@ async function showTeacherDashboard() {
   }
 }
 
+// ========== DOM CONTENT LOADED ==========
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOMContentLoaded fired");
   const el = (id) => document.getElementById(id);
@@ -159,8 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
     else { errDiv.innerText = ""; await joinQuizByCode(code); }
   });
 
-  // Teacher dashboard and student history
+  // Teacher dashboard (only visible for teachers via role UI)
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
+
+  // Student history
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) { loadStudentHistory(); overlay.style.display = "block"; }
@@ -198,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fullscreen continue
   el("pauseOverlayContinue")?.addEventListener('click', () => document.documentElement.requestFullscreen());
 
-  // ========== HOW TO PLAY POPUP ==========
+  // ========== HOW TO PLAY POPUP (same as before) ==========
   const howToPlayBtn = document.getElementById('howToPlayBtn');
   const popup = document.getElementById('howToPlayPopup');
   const closePopup = document.getElementById('closeHowToPlay');
