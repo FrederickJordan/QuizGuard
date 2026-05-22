@@ -3,7 +3,7 @@ import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
 import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
 import { db, auth } from './firebase-config.js';
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc } from "firebase/firestore';
 
 let questions = [];
 let currentQuestion = 0;
@@ -35,7 +35,6 @@ function clearAiFeedback() {
 }
 
 async function requestAiFeedback(wrongAnswers) {
-  if (!wrongAnswers || wrongAnswers.length === 0) return "";
   try {
     const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
       method: "POST",
@@ -75,21 +74,25 @@ export function failCurrentQuestion(reason) {
 async function saveQuizResults(aiFeedbackText) {
   const user = auth.currentUser;
   if (!user) return;
-  await addDoc(collection(db, "quizResults"), {
-    userId: user.uid,
-    userEmail: user.email,
-    code: currentQuizCode || "manual",
-    subject: currentQuizSubject,
-    difficulty: currentQuizDifficulty,
-    score: Math.floor(score),
-    penalties: penalties,
-    failures: failures,
-    tabSwitches: tabSwitches,
-    wrongAnswers: wrongAnswers,
-    aiFeedback: aiFeedbackText,
-    timestamp: new Date().toISOString()
-  });
-  addLog("Quiz results saved to Firestore.");
+  try {
+    await addDoc(collection(db, "quizResults"), {
+      userId: user.uid,
+      userEmail: user.email,
+      code: currentQuizCode || "manual",
+      subject: currentQuizSubject,
+      difficulty: currentQuizDifficulty,
+      score: Math.floor(score),
+      penalties: penalties,
+      failures: failures,
+      tabSwitches: tabSwitches,
+      wrongAnswers: wrongAnswers,
+      aiFeedback: aiFeedbackText,
+      timestamp: new Date().toISOString()
+    });
+    addLog("Quiz results saved.");
+  } catch (err) {
+    console.error("Save results error:", err);
+  }
 }
 
 function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = null, difficulty = null) {
@@ -240,29 +243,24 @@ export async function endQuiz() {
   quizActive = false;
   setQuizActive(false);
   hidePauseOverlay();
+
+  let aiFeedbackText = "";
+  if (wrongAnswers.length > 0) {
+    showAiFeedback("Generating AI feedback for your incorrect answers...");
+    aiFeedbackText = await requestAiFeedback(wrongAnswers);
+    showAiFeedback(aiFeedbackText);
+  } else {
+    clearAiFeedback();
+    aiFeedbackText = "No wrong answers! Perfect score!";
+  }
+  
+  await saveQuizResults(aiFeedbackText);
+  
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
   getEl("finalScore").textContent = Math.floor(score);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
-
-  // Show AI feedback on the results screen
-  let aiFeedbackText = "";
-  if (wrongAnswers.length > 0) {
-    showAiFeedback("Generating AI feedback for your incorrect answers...");
-    try {
-      aiFeedbackText = await requestAiFeedback(wrongAnswers);
-      showAiFeedback(aiFeedbackText);
-    } catch (err) {
-      showAiFeedback("Unable to fetch AI feedback right now.");
-      aiFeedbackText = "AI feedback unavailable.";
-    }
-  } else {
-    clearAiFeedback();
-  }
-
-  // Save results to Firestore
-  await saveQuizResults(aiFeedbackText);
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
