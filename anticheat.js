@@ -34,7 +34,7 @@ export function showPauseOverlay(message, showContinueButton = false) {
   if (!overlay || !title || !msg || !continueBtn) return;
   title.textContent = showContinueButton ? 'Warning!' : 'Quiz Paused';
   msg.textContent = message;
-  continueBtn.style.display = showContinueButton ? 'inline-flex' : 'none';
+  continueBtn.style.display = showContinueButton ? 'inline-block' : 'none';
   overlay.style.background = showContinueButton ? '#000000' : 'rgba(0, 0, 0, 0.9)';
   overlay.style.display = 'flex';
 }
