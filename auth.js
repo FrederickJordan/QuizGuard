@@ -11,6 +11,13 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from './firebase-config.js';
 import { getEl, addLog } from './utils.js';
 
+/** Prevents onAuthStateChanged from signing out mid-registration before role is saved */
+export let isRegistering = false;
+
+function normalizeRole(role) {
+  return String(role || '').toLowerCase().trim() === 'teacher' ? 'teacher' : 'student';
+}
+
 export function showAuthMessage(message, isSuccess = false) {
   const msgDiv = getEl("authMessage");
   if (!msgDiv) return;
@@ -59,14 +66,16 @@ export async function handleRegister(email, password, role = "student") {
     return;
   }
 
-  const normalizedRole = role === "teacher" ? "teacher" : "student";
+  const normalizedRole = normalizeRole(role);
+  console.log(`[Register] Selected role: "${role}" → saving as "${normalizedRole}"`);
 
+  isRegistering = true;
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
-    // Save role before sign-out so login never races with a missing profile
     const userDocRef = doc(db, "users", user.uid);
+
+    // Must finish while still signed in (Firestore rules usually require auth)
     await setDoc(
       userDocRef,
       {
@@ -77,24 +86,36 @@ export async function handleRegister(email, password, role = "student") {
       },
       { merge: true }
     );
-    addLog(`User role "${normalizedRole}" stored for ${user.email}`);
 
+    const verifySnap = await getDoc(userDocRef);
+    const savedRole = verifySnap.data()?.role;
+    console.log(`[Register] Firestore role after save: "${savedRole}"`);
+    if (savedRole !== normalizedRole) {
+      throw new Error(
+        `Could not save ${normalizedRole} role (Firestore has "${savedRole || 'none'}"). Check Firestore security rules.`
+      );
+    }
+
+    addLog(`User role "${normalizedRole}" stored for ${user.email}`);
     await sendEmailVerification(user);
     showAuthMessage(
-      `Verification email sent to ${user.email}. After verifying, log in as ${normalizedRole}.`,
+      `Account created as ${normalizedRole}. Verify your email, then log in.`,
       true
     );
     addLog(`Verification email sent to ${user.email}`);
-
-    await signOut(auth);
   } catch (error) {
     let errorMsg = "Registration failed. ";
-    if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
-    else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
+    if (error.code === 'auth/email-already-in-use') {
+      errorMsg += "Email already registered — log in or use a new email.";
+    } else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
     else if (error.code === 'auth/weak-password') errorMsg += "Password too weak.";
     else errorMsg += error.message;
     showAuthMessage(errorMsg, false);
-    addLog(`Registration error: ${error.code}`);
+    addLog(`Registration error: ${error?.code || error.message}`);
+    console.error('[Register] failed:', error);
+  } finally {
+    isRegistering = false;
+    if (auth.currentUser) await signOut(auth);
   }
 }
 
