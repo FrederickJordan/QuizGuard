@@ -50,7 +50,6 @@ async function loadStudentHistory() {
   }
 
   try {
-    // Query without orderBy to avoid index requirement
     const q = query(
       collection(db, "quizResults"),
       where("userId", "==", user.uid)
@@ -61,7 +60,6 @@ async function loadStudentHistory() {
       return;
     }
 
-    // Convert to array and sort by timestamp descending
     const results = [];
     snapshot.forEach(doc => {
       results.push({ id: doc.id, ...doc.data() });
@@ -106,7 +104,6 @@ async function showTeacherDashboard() {
   container.innerHTML = '<p style="text-align: center; padding: 40px;">Loading results...</p>';
 
   try {
-    // 1. Get all quiz codes created by this teacher
     const codesQuery = query(collection(db, "quizCodes"), where("creatorUid", "==", teacherUid));
     const codesSnap = await getDocs(codesQuery);
     if (codesSnap.empty) {
@@ -115,7 +112,6 @@ async function showTeacherDashboard() {
     }
 
     const codeList = codesSnap.docs.map(doc => doc.data().code);
-    // 2. Get all quiz results for those codes (without orderBy to avoid index)
     const resultsQuery = query(collection(db, "quizResults"), where("code", "in", codeList));
     const resultsSnap = await getDocs(resultsQuery);
 
@@ -124,14 +120,12 @@ async function showTeacherDashboard() {
       return;
     }
 
-    // Convert to array and sort by timestamp descending (client-side)
     const results = [];
     resultsSnap.forEach(doc => {
       results.push({ id: doc.id, ...doc.data() });
     });
     results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // 3. Build HTML table
     let html = '<table style="width:100%; border-collapse: collapse; text-align: left;">';
     html += `<thead><tr style="background: #f1f5f9; border-bottom: 2px solid #e2e8f0;">
       <th style="padding: 12px;">Student</th>
@@ -142,7 +136,7 @@ async function showTeacherDashboard() {
       <th style="padding: 12px;">Tab Switches</th>
       <th style="padding: 12px;">Date</th>
       <th style="padding: 12px;">Details</th>
-    </tr></thead><tbody>`;
+    <tr></thead><tbody>`;
 
     results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
@@ -158,10 +152,9 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
       </tr>`;
     });
-    html += '</tbody><table>';
+    html += '</tbody></table>';
     container.innerHTML = html;
 
-    // Attach event listeners to "View" buttons
     document.querySelectorAll('.viewResultDetails').forEach(btn => {
       btn.addEventListener('click', async () => {
         const resultId = btn.dataset.id;
@@ -221,11 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Teacher dashboard
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
 
-  // Student history – open overlay and load history
+  // Student history
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) {
-      loadStudentHistory(); // load data every time it opens
+      loadStudentHistory();
       overlay.style.display = "block";
     }
   });
@@ -263,6 +256,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fullscreen continue
   el("pauseOverlayContinue")?.addEventListener('click', () => document.documentElement.requestFullscreen());
+
+  // ========== TUTORIAL CAROUSEL ==========
+  const ftbImages = ['ftb1.png', 'ftb2.png', 'ftb3.png', 'ftb4.png'];
+  const ftbCaptions = ['Step 1: The cups appear with the ball hidden under one cup.', 'Step 2: Hover over a cup – you can see the ball.', 'Step 3: Click the correct cup before the gauge empties!', 'Step 4: After a correct click, the ball moves to a new random cup and the gauge refills.'];
+  const qteImages = ['qte1.png', 'qte2.png', 'qte3.png'];
+  const qteCaptions = ['Step 1: The QTE gauge appears with a random target key.', 'Step 2: Press the correct key – the gauge increases by 35%.', 'Step 3: Keep pressing correct keys to keep the gauge full and avoid penalties.'];
+
+  let ftbIndex = 0;
+  let qteIndex = 0;
+
+  function updateFtbCarousel() {
+    const img = document.getElementById('ftbImage');
+    const cap = document.getElementById('ftbCaption');
+    if (img) img.src = ftbImages[ftbIndex];
+    if (cap) cap.textContent = ftbCaptions[ftbIndex];
+  }
+  function updateQteCarousel() {
+    const img = document.getElementById('qteImage');
+    const cap = document.getElementById('qteCaption');
+    if (img) img.src = qteImages[qteIndex];
+    if (cap) cap.textContent = qteCaptions[qteIndex];
+  }
+
+  const tabFtb = document.getElementById('tabFtb');
+  const tabQte = document.getElementById('TabQte');
+  const ftbCarousel = document.getElementById('ftbCarousel');
+  const qteCarousel = document.getElementById('qteCarousel');
+
+  if (tabFtb && tabQte && ftbCarousel && qteCarousel) {
+    tabFtb.addEventListener('click', () => {
+      tabFtb.classList.add('active');
+      tabQte.classList.remove('active');
+      ftbCarousel.style.display = 'block';
+      qteCarousel.style.display = 'none';
+    });
+    tabQte.addEventListener('click', () => {
+      tabQte.classList.add('active');
+      tabFtb.classList.remove('active');
+      qteCarousel.style.display = 'block';
+      ftbCarousel.style.display = 'none';
+    });
+  }
+
+  const ftbPrev = document.querySelector('.carousel-prev[data-carousel="ftb"]');
+  const ftbNext = document.querySelector('.carousel-next[data-carousel="ftb"]');
+  if (ftbPrev && ftbNext) {
+    ftbPrev.addEventListener('click', () => {
+      ftbIndex = (ftbIndex - 1 + ftbImages.length) % ftbImages.length;
+      updateFtbCarousel();
+    });
+    ftbNext.addEventListener('click', () => {
+      ftbIndex = (ftbIndex + 1) % ftbImages.length;
+      updateFtbCarousel();
+    });
+  }
+
+  const qtePrev = document.querySelector('.carousel-prev[data-carousel="qte"]');
+  const qteNext = document.querySelector('.carousel-next[data-carousel="qte"]');
+  if (qtePrev && qteNext) {
+    qtePrev.addEventListener('click', () => {
+      qteIndex = (qteIndex - 1 + qteImages.length) % qteImages.length;
+      updateQteCarousel();
+    });
+    qteNext.addEventListener('click', () => {
+      qteIndex = (qteIndex + 1) % qteImages.length;
+      updateQteCarousel();
+    });
+  }
+
+  updateFtbCarousel();
+  updateQteCarousel();
 
   // Auth state listener
   onAuthStateChanged(auth, async (user) => {
