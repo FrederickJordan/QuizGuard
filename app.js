@@ -22,7 +22,6 @@ function escapeHtml(str) {
 
 // ========== MODAL FOR VIEWING DETAILS ==========
 function showDetailsModal(title, wrongAnswers, aiFeedback) {
-  // Remove existing modal if any
   const existing = document.getElementById('detailsModal');
   if (existing) existing.remove();
 
@@ -81,7 +80,6 @@ async function getUserRole(userId, email) {
     await new Promise((r) => setTimeout(r, 300));
   }
 
-  // One final read — never overwrite an existing teacher profile
   try {
     const finalSnap = await getDoc(docRef);
     if (finalSnap.exists()) {
@@ -93,7 +91,6 @@ async function getUserRole(userId, email) {
     return "student";
   }
 
-  // Only for accounts with no Firestore profile yet (e.g. legacy Google users)
   await setDoc(
     docRef,
     { email, role: "student", createdAt: new Date().toISOString() },
@@ -339,7 +336,7 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
         <td style="padding: 12px;"><button class="viewResultDetails" data-subject="${escapeHtml(data.subject || 'Quiz')}" data-wrong='${JSON.stringify(data.wrongAnswers || [])}' data-feedback="${escapeHtml(data.aiFeedback || '')}" style="background:#2563eb; color:white; border:none; padding:4px 12px; border-radius:8px; cursor:pointer;">View</button></td>
-      </tr>`;
+       </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -439,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fullscreen continue
   el("pauseOverlayContinue")?.addEventListener('click', () => document.documentElement.requestFullscreen());
 
-  // ========== HOW TO PLAY POPUP (unchanged) ==========
+  // ========== HOW TO PLAY POPUP ==========
   const howToPlayBtn = document.getElementById('howToPlayBtn');
   const popup = document.getElementById('howToPlayPopup');
   const closePopup = document.getElementById('closeHowToPlay');
@@ -522,28 +519,28 @@ document.addEventListener('DOMContentLoaded', () => {
   if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) popup.style.display = 'none'; });
 
   // Auth state listener
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    if (!user.emailVerified) {
-      // Don't sign out during register — that can cancel the role write to Firestore
-      if (isRegistering) return;
-      showAuthMessage("Please verify your email.", false);
-      await signOut(auth);
-      return;
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      if (!user.emailVerified) {
+        if (isRegistering) return;
+        showAuthMessage("Please verify your email.", false);
+        await signOut(auth);
+        return;
+      }
+      const role = await getUserRole(user.uid, user.email);
+      currentUserRole = role;
+      await loadQuestionBankFromFirestore();
+      updateSubjectDropdowns();
+      const editorBtn = el("openEditorBtn");
+      const teacherDashboardBtn = el("teacherDashboardBtn");
+      if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
+      if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
+      el("authScreen").style.display = "none";
+      el("appContainer").style.display = "block";
+    } else {
+      window.questionBank = getDefaultQuestionBank();
+      el("authScreen").style.display = "flex";
+      el("appContainer").style.display = "none";
     }
-    const role = await getUserRole(user.uid, user.email);
-    currentUserRole = role;
-    await loadQuestionBankFromFirestore();
-    updateSubjectDropdowns();
-    const editorBtn = el("openEditorBtn");
-    const teacherDashboardBtn = el("teacherDashboardBtn");
-    if (editorBtn) editorBtn.style.display = role === "teacher" ? "inline-block" : "none";
-    if (teacherDashboardBtn) teacherDashboardBtn.style.display = role === "teacher" ? "inline-block" : "none";
-    el("authScreen").style.display = "none";
-    el("appContainer").style.display = "block";
-  } else {
-    window.questionBank = getDefaultQuestionBank();
-    el("authScreen").style.display = "flex";
-    el("appContainer").style.display = "none";
-  }
+  });
 });
