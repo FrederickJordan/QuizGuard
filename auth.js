@@ -7,10 +7,9 @@ import {
   signInWithPopup,
   sendEmailVerification
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from './firebase-config.js';
 import { getEl, addLog } from './utils.js';
-
-const db = getFirestore();
 
 export function showAuthMessage(message, isSuccess = false) {
   const msgDiv = getEl("authMessage");
@@ -59,23 +58,34 @@ export async function handleRegister(email, password, role = "student") {
     showAuthMessage("Password must be at least 6 characters.", false);
     return;
   }
+
+  const normalizedRole = role === "teacher" ? "teacher" : "student";
+
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    await sendEmailVerification(user);
-    showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
-    addLog(`Verification email sent to ${user.email}`);
-    
-    // Save user role – this document will later also contain the questionBank
+
+    // Save role before sign-out so login never races with a missing profile
     const userDocRef = doc(db, "users", user.uid);
-    await setDoc(userDocRef, {
-      email: user.email,
-      role: role,
-      createdAt: new Date().toISOString(),
-      emailVerified: false
-    });
-    addLog(`User role "${role}" stored for ${user.email}`);
-    
+    await setDoc(
+      userDocRef,
+      {
+        email: user.email,
+        role: normalizedRole,
+        createdAt: new Date().toISOString(),
+        emailVerified: false,
+      },
+      { merge: true }
+    );
+    addLog(`User role "${normalizedRole}" stored for ${user.email}`);
+
+    await sendEmailVerification(user);
+    showAuthMessage(
+      `Verification email sent to ${user.email}. After verifying, log in as ${normalizedRole}.`,
+      true
+    );
+    addLog(`Verification email sent to ${user.email}`);
+
     await signOut(auth);
   } catch (error) {
     let errorMsg = "Registration failed. ";
@@ -98,14 +108,21 @@ export async function handleGoogleSignIn() {
       showAuthMessage("Your Google email is not verified. Please verify it.", false);
       return;
     }
-    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        role: "student",
-        createdAt: new Date().toISOString(),
-        emailVerified: true
-      });
+      await setDoc(
+        userDocRef,
+        {
+          email: user.email,
+          role: "student",
+          createdAt: new Date().toISOString(),
+          emailVerified: true,
+        },
+        { merge: true }
+      );
+    } else if (!userDoc.data().role) {
+      await setDoc(userDocRef, { role: "student" }, { merge: true });
     }
     showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
     addLog(`Google sign-in: ${user.email}`);
