@@ -19,7 +19,6 @@ let wrongAnswers = [];
 let currentQuizCode = null;
 let currentQuizSubject = null;
 let currentQuizDifficulty = null;
-let isEndingQuiz = false; // Prevent multiple endQuiz calls
 
 // ========== AI FEEDBACK FUNCTIONS ==========
 
@@ -53,28 +52,10 @@ function clearAiFeedback() {
   feedbackBox.innerHTML = "";
 }
 
-function buildManualFeedback(wrongAnswersList) {
-  if (!wrongAnswersList || wrongAnswersList.length === 0) {
-    return "No wrong answers recorded.";
-  }
-  
-  let feedback = "📝 Review Your Mistakes\n\n";
-  wrongAnswersList.forEach((wa, i) => {
-    feedback += `${i+1}. ${wa.question}\n`;
-    feedback += `   ❌ Your answer: ${wa.selectedAnswer}\n`;
-    feedback += `   ✅ Correct: ${wa.correctAnswer}\n\n`;
-  });
-  return feedback;
-}
-
-async function requestAiFeedback(wrongAnswersList) {
+async function requestAiFeedback(wrongAnswers) {
   const WORKER_URL = "https://quizguardslave.17fjsetiawan.workers.dev";
   
-  console.log(`📤 Sending ${wrongAnswersList.length} wrong answers to AI:`, wrongAnswersList);
-  
-  if (!wrongAnswersList || wrongAnswersList.length === 0) {
-    return "No wrong answers to analyze.";
-  }
+  console.log(`📤 Sending ${wrongAnswers.length} wrong answers to AI:`, wrongAnswers);
   
   try {
     const response = await fetch(WORKER_URL, {
@@ -82,7 +63,7 @@ async function requestAiFeedback(wrongAnswersList) {
       headers: { 
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ wrongAnswers: wrongAnswersList })
+      body: JSON.stringify({ wrongAnswers: wrongAnswers })
     });
     
     console.log(`📥 Response status: ${response.status}`);
@@ -93,11 +74,18 @@ async function requestAiFeedback(wrongAnswersList) {
     
     const data = await response.json();
     console.log("✅ AI Response received:", data);
-    return data.feedback || buildManualFeedback(wrongAnswersList);
+    return data.feedback || "AI analysis complete!";
     
   } catch (error) {
     console.error("❌ AI fetch error:", error);
-    return buildManualFeedback(wrongAnswersList);
+    
+    let fallbackFeedback = `📝 Review Your Mistakes\n\n`;
+    wrongAnswers.forEach((wa, i) => {
+      fallbackFeedback += `${i+1}. ${wa.question}\n`;
+      fallbackFeedback += `   ❌ Your answer: ${wa.selectedAnswer}\n`;
+      fallbackFeedback += `   ✅ Correct: ${wa.correctAnswer}\n\n`;
+    });
+    return fallbackFeedback;
   }
 }
 
@@ -118,60 +106,31 @@ export function applyPenalty(reason) {
 }
 
 export function failCurrentQuestion(reason) {
-  console.log(`🔴 failCurrentQuestion called with reason: ${reason}`);
-  console.log(`   currentQuestion: ${currentQuestion}, questions length: ${questions.length}`);
-  console.log(`   quizActive: ${quizActive}, isEndingQuiz: ${isEndingQuiz}`);
-  
-  // Don't process if quiz is already ending
-  if (isEndingQuiz) {
-    console.log(`   ⚠️ Quiz is already ending, skipping failure`);
-    return;
-  }
-  
-  if (currentQuestion >= questions.length) {
-    console.log(`   ❌ currentQuestion out of range, returning`);
-    return;
-  }
+  if (currentQuestion >= questions.length) return;
   
   const currentQ = questions[currentQuestion];
-  console.log(`   Current question:`, currentQ?.question);
-  
-  if (!currentQ) {
-    console.log(`   ❌ No current question found!`);
-    return;
-  }
   
   // Record the failure
   failures++;
   
-  // Get correct answer text
-  const correctAnswerText = currentQ.answers[currentQ.correct];
-  console.log(`   Correct answer: ${correctAnswerText}`);
-  
-  // IMPORTANT: Always add to wrongAnswers array for AI analysis
-  const wrongAnswerEntry = {
-    question: currentQ.question,
-    selectedAnswer: `[FAILED - ${reason}]`,
-    correctAnswer: correctAnswerText
-  };
-  
-  wrongAnswers.push(wrongAnswerEntry);
-  
-  console.log(`   ✅ Added to wrongAnswers. Total wrongAnswers now: ${wrongAnswers.length}`);
-  console.log(`   Wrong answer entry:`, wrongAnswerEntry);
-  addLog(`❌ Question failed: ${reason} - Added to wrongAnswers (total: ${wrongAnswers.length})`);
+  // Add to wrong answers array for AI analysis
+  if (currentQ) {
+    const correctAnswerText = currentQ.answers[currentQ.correct];
+    wrongAnswers.push({
+      question: currentQ.question,
+      selectedAnswer: `[FAILED - ${reason}]`,
+      correctAnswer: correctAnswerText
+    });
+    addLog(`❌ Question failed: ${reason}`);
+  }
   
   // Move to next question
   currentQuestion++;
-  console.log(`   Moved to next question: ${currentQuestion}`);
   
   // Load next question if quiz is still active
   if (quizActive && currentQuestion < questions.length) {
-    console.log(`   Loading next question...`);
     loadQuestion();
   } else if (currentQuestion >= questions.length) {
-    console.log(`   Quiz complete, calling endQuiz...`);
-    console.log(`   Final wrongAnswers count: ${wrongAnswers.length}`);
     endQuiz();
   }
 }
@@ -179,17 +138,7 @@ export function failCurrentQuestion(reason) {
 async function saveQuizResults() {
   const user = auth.currentUser;
   if (!user) return;
-  
-  // Get the AI feedback text from the displayed element
-  const feedbackElement = getEl("aiFeedbackResults");
-  let aiFeedbackText = "";
-  if (feedbackElement) {
-    aiFeedbackText = feedbackElement.textContent || "";
-  }
-  
-  console.log(`💾 Saving quiz results with ${wrongAnswers.length} wrong answers`);
-  console.log(`   Wrong answers:`, wrongAnswers);
-  
+  const aiFeedbackText = getEl("aiFeedbackResults")?.textContent || "";
   await addDoc(collection(db, "quizResults"), {
     userId: user.uid,
     userEmail: user.email,
@@ -225,7 +174,6 @@ function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = 
   pointsPerCorrect = 100 / questions.length;
   if (isNaN(pointsPerCorrect)) pointsPerCorrect = 10;
   resetFullscreenExitAttempts();
-  isEndingQuiz = false;
 
   let gameMode;
   if (selectedMinigame === "random") gameMode = Math.random() < 0.5 ? "cups" : "qte";
@@ -291,12 +239,8 @@ export async function joinQuizByCode(code) {
 }
 
 export function loadQuestion() {
-  console.log(`📖 loadQuestion called, currentQuestion: ${currentQuestion}, questions.length: ${questions.length}`);
-  console.log(`   Current wrongAnswers count: ${wrongAnswers.length}`);
-
+  // Check if quiz is complete
   if (currentQuestion >= questions.length) {
-    console.log(`   Quiz complete, calling endQuiz...`);
-    console.log(`   Final wrongAnswers count before endQuiz: ${wrongAnswers.length}`);
     endQuiz();
     return;
   }
@@ -344,7 +288,6 @@ export function loadQuestion() {
           selectedAnswer: answerOptions[selectedAnswerIndex].text,
           correctAnswer: answerOptions[correctIndex].text
         });
-        console.log(`   Wrong answer added via submit. Total: ${wrongAnswers.length}`);
       }
       updateStats();
       currentQuestion++;
@@ -355,16 +298,6 @@ export function loadQuestion() {
 }
 
 export async function endQuiz() {
-  // Prevent multiple calls to endQuiz
-  if (isEndingQuiz) {
-    console.log("⚠️ endQuiz already in progress, skipping");
-    return;
-  }
-  isEndingQuiz = true;
-  
-  console.log(`🏁 endQuiz called. Final wrongAnswers count: ${wrongAnswers.length}`);
-  console.log(`   Final wrongAnswers list:`, JSON.stringify(wrongAnswers, null, 2));
-  
   stopMinigames();
   quizActive = false;
   setQuizActive(false);
@@ -387,31 +320,20 @@ export async function endQuiz() {
     
     try {
       aiFeedbackText = await requestAiFeedback(wrongAnswers);
-      console.log("🎉 AI feedback generated successfully");
+      console.log("🎉 AI feedback generated");
       showAiFeedback(aiFeedbackText);
     } catch (error) {
       console.error("AI failed:", error);
-      const manualFeedback = buildManualFeedback(wrongAnswers);
-      showAiFeedback(manualFeedback);
+      showAiFeedback(`📝 Review Your Mistakes\n\n${wrongAnswers.map((wa, i) => 
+        `${i+1}. Correct answer: ${wa.correctAnswer}\n`
+      ).join('\n')}`);
     }
   } else {
-    console.log("⚠️ No wrong answers recorded!");
-    // Double-check: If score is not 100 but no wrong answers, something is wrong
-    if (Math.floor(score) < 100) {
-      console.warn("⚠️ Score is not 100 but no wrong answers recorded - this shouldn't happen!");
-      showAiFeedback("⚠️ Quiz completed. Please check your results carefully. Contact support if you see this message.");
-    } else {
-      showAiFeedback("🎉 PERFECT SCORE! 🎉\n\nExcellent work! You answered every question correctly.");
-    }
+    showAiFeedback("🎉 PERFECT SCORE! 🎉\n\nExcellent work!");
   }
   
   await saveQuizResults();
-  addLog(`Quiz finished. Score: ${Math.floor(score)}/100, Wrong answers: ${wrongAnswers.length}`);
-  
-  // Reset flag for next quiz
-  setTimeout(() => {
-    isEndingQuiz = false;
-  }, 1000);
+  addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
 export function returnToHome() {
@@ -421,6 +343,5 @@ export function returnToHome() {
   hidePauseOverlay();
   getEl("quizApp").style.display = "none";
   getEl("homeScreen").style.display = "flex";
-  isEndingQuiz = false;
   addLog("Returned home.");
 }
