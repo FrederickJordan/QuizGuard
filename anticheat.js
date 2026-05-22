@@ -8,16 +8,19 @@ let fullscreenExitAttempts = 0;
 let shouldFailOnFullscreenResume = false;
 let pendingFailureCallback = null;
 let minigamePauseCallback = null;
+let failureTriggered = false;
 
 export function setQuizActive(active) { quizActive = active; }
 export function setQuizPaused(paused) { quizPaused = paused; }
 export function setPendingFailureCallback(callback) { pendingFailureCallback = callback; }
 export function setMinigamePauseCallback(callback) { minigamePauseCallback = callback; }
+
 export function resetFullscreenExitAttempts() {
   fullscreenExitAttempts = 0;
   shouldFailOnFullscreenResume = false;
   waitingForFullscreen = false;
   waitingForFocus = false;
+  failureTriggered = false;
 }
 
 export function requestFullscreenMode() {
@@ -34,7 +37,7 @@ export function showPauseOverlay(message, showContinueButton = false) {
   if (!overlay || !title || !msg || !continueBtn) return;
   title.textContent = showContinueButton ? 'Warning!' : 'Quiz Paused';
   msg.textContent = message;
-  continueBtn.style.display = showContinueButton ? 'inline-block' : 'none';
+  continueBtn.style.display = showContinueButton ? 'inline-flex' : 'none';
   overlay.style.background = showContinueButton ? '#000000' : 'rgba(0, 0, 0, 0.9)';
   overlay.style.display = 'flex';
 }
@@ -55,9 +58,18 @@ export function handleFullscreenExit() {
     return;
   }
 
+  // For second exit, immediately trigger failure
   quizPaused = true;
   if (minigamePauseCallback) minigamePauseCallback(true);
   shouldFailOnFullscreenResume = true;
+  
+  // Trigger failure immediately without waiting for resume
+  if (pendingFailureCallback && !failureTriggered) {
+    console.log("🔴 Fullscreen exited twice - triggering immediate failure");
+    failureTriggered = true;
+    pendingFailureCallback('Fullscreen exited twice');
+  }
+  
   showPauseOverlay('Warning! Fullscreen exited again. The question will be marked wrong. Click continue to re-enter fullscreen and proceed.', true);
 }
 
@@ -95,10 +107,16 @@ export function resumeAfterFullscreenReturn() {
   hidePauseOverlay();
   quizPaused = false;
   if (minigamePauseCallback) minigamePauseCallback(false);
-  if (shouldFailOnFullscreenResume && pendingFailureCallback) {
+  
+  // Only trigger failure if we haven't already triggered it
+  if (shouldFailOnFullscreenResume && pendingFailureCallback && !failureTriggered) {
+    failureTriggered = true;
     pendingFailureCallback('Fullscreen exited twice');
     shouldFailOnFullscreenResume = false;
+  } else {
+    shouldFailOnFullscreenResume = false;
   }
+  
   if (typeof window.loadQuestion === 'function') window.loadQuestion();
   addLog('Resumed quiz in fullscreen.');
 }
