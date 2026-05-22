@@ -19,6 +19,46 @@ function escapeHtml(str) {
   return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
+// ========== MODAL FOR VIEWING DETAILS ==========
+function showDetailsModal(title, wrongAnswers, aiFeedback) {
+  // Remove existing modal if any
+  const existing = document.getElementById('detailsModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'detailsModal';
+  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:20000; display:flex; align-items:center; justify-content:center; overflow-y:auto; padding:20px;';
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  let wrongHtml = '';
+  if (wrongAnswers && wrongAnswers.length) {
+    wrongHtml = '<div style="max-height: 300px; overflow-y: auto;"><ul style="margin:0; padding-left:20px;">';
+    wrongAnswers.forEach(w => {
+      wrongHtml += `<li style="margin-bottom:15px;"><strong>${escapeHtml(w.question)}</strong><br>❌ Your answer: ${escapeHtml(w.selectedAnswer)}<br>✅ Correct: ${escapeHtml(w.correctAnswer)}</li>`;
+    });
+    wrongHtml += '</ul></div>';
+  } else {
+    wrongHtml = '<p>None</p>';
+  }
+
+  modal.innerHTML = `
+    <div style="background:white; max-width:700px; width:100%; border-radius:20px; padding:30px; position:relative;">
+      <button id="closeDetailsModal" style="position:absolute; top:15px; right:20px; background:#ef4444; color:white; border:none; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:20px;">&times;</button>
+      <h2 style="margin-top:0;">${escapeHtml(title)}</h2>
+      <div style="margin-bottom:20px;">
+        <strong>Wrong Answers:</strong>
+        ${wrongHtml}
+      </div>
+      <div>
+        <strong>AI Feedback:</strong>
+        <div style="background:#f8fafc; padding:12px; border-radius:12px; margin-top:8px;">${escapeHtml(aiFeedback || 'No AI feedback available.')}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('closeDetailsModal')?.addEventListener('click', () => modal.remove());
+}
+
 async function getUserRole(userId, email) {
   const docRef = doc(db, "users", userId);
   for (let i = 0; i < 20; i++) {
@@ -28,15 +68,13 @@ async function getUserRole(userId, email) {
       console.log(`✅ Role found after ${i+1} attempts: ${role}`);
       return role;
     }
-    console.log(`⏳ Attempt ${i+1}/20: Document not found, waiting 300ms...`);
     await new Promise(r => setTimeout(r, 300));
   }
-  console.warn("❌ No document after retries. Creating default student role.");
   await setDoc(docRef, { email, role: "student", createdAt: new Date().toISOString() });
   return "student";
 }
 
-// ========== STUDENT HISTORY (with AI feedback and wrong answers) ==========
+// ========== STUDENT HISTORY (with modal) ==========
 async function loadStudentHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
@@ -70,38 +108,29 @@ async function loadStudentHistory() {
             <span style="font-size:24px;">${data.score}/100</span>
           </div>
           <div style="color:#64748b; font-size:13px;">${date}</div>
-          <div style="margin: 8px 0;">Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
-          <button class="viewStudentDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer; margin-top: 8px;">View Details</button>
+          <div style="margin:8px 0;">Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
+          <button class="viewStudentDetails" data-id="${data.id}" data-subject="${escapeHtml(data.subject || 'Quiz')}" data-wrong='${JSON.stringify(data.wrongAnswers || [])}' data-feedback="${escapeHtml(data.aiFeedback || '')}" style="background:#2563eb; color:white; border:none; padding:4px 12px; border-radius:8px; cursor:pointer;">View Details</button>
         </div>
       `;
     });
     container.innerHTML = html;
 
-    // Attach click handlers for "View Details" buttons
     document.querySelectorAll('.viewStudentDetails').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const resultId = btn.dataset.id;
-        const resultDoc = await getDoc(doc(db, "quizResults", resultId));
-        if (resultDoc.exists()) {
-          const data = resultDoc.data();
-          let wrongList = '';
-          if (data.wrongAnswers && data.wrongAnswers.length) {
-            wrongList = data.wrongAnswers.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n');
-          } else {
-            wrongList = 'None';
-          }
-          const aiFeedback = data.aiFeedback ? data.aiFeedback : 'No AI feedback available.';
-          alert(`Quiz: ${data.subject || 'Quiz'}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${aiFeedback}`);
-        }
+      btn.addEventListener('click', () => {
+        const title = btn.dataset.subject;
+        let wrong = [];
+        try { wrong = JSON.parse(btn.dataset.wrong); } catch(e) { wrong = []; }
+        const feedback = btn.dataset.feedback || 'No AI feedback available.';
+        showDetailsModal(title, wrong, feedback);
       });
     });
   } catch (err) {
-    console.error("Error loading student history:", err);
+    console.error(err);
     container.innerHTML = `<div style="text-align:center; padding:40px;">Error loading history.</div>`;
   }
 }
 
-// ========== TEACHER DASHBOARD (with AI feedback) ==========
+// ========== TEACHER DASHBOARD (with modal) ==========
 async function showTeacherDashboard() {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) { alert("Not logged in as teacher."); return; }
@@ -133,20 +162,18 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.penalties || 0}</td>
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
-        <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
+        <td style="padding: 12px;"><button class="viewResultDetails" data-subject="${escapeHtml(data.subject || 'Quiz')}" data-wrong='${JSON.stringify(data.wrongAnswers || [])}' data-feedback="${escapeHtml(data.aiFeedback || '')}" style="background:#2563eb; color:white; border:none; padding:4px 12px; border-radius:8px; cursor:pointer;">View</button></td>
       </tr>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
     document.querySelectorAll('.viewResultDetails').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const resultDoc = await getDoc(doc(db, "quizResults", btn.dataset.id));
-        if (resultDoc.exists()) {
-          const data = resultDoc.data();
-          let wrongList = data.wrongAnswers?.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n') || 'None';
-          const aiFeedback = data.aiFeedback ? data.aiFeedback : 'No AI feedback available.';
-          alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${aiFeedback}`);
-        }
+      btn.addEventListener('click', () => {
+        const title = btn.dataset.subject;
+        let wrong = [];
+        try { wrong = JSON.parse(btn.dataset.wrong); } catch(e) { wrong = []; }
+        const feedback = btn.dataset.feedback || 'No AI feedback available.';
+        showDetailsModal(title, wrong, feedback);
       });
     });
   } catch (err) {
@@ -189,10 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
     else { errDiv.innerText = ""; await joinQuizByCode(code); }
   });
 
-  // Teacher dashboard (only visible for teachers via role UI)
+  // Teacher dashboard and student history
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
-
-  // Student history
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) { loadStudentHistory(); overlay.style.display = "block"; }
@@ -230,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fullscreen continue
   el("pauseOverlayContinue")?.addEventListener('click', () => document.documentElement.requestFullscreen());
 
-  // ========== HOW TO PLAY POPUP (same as before) ==========
+  // ========== HOW TO PLAY POPUP (unchanged) ==========
   const howToPlayBtn = document.getElementById('howToPlayBtn');
   const popup = document.getElementById('howToPlayPopup');
   const closePopup = document.getElementById('closeHowToPlay');
@@ -312,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) popup.style.display = 'none'; });
 
-  // ========== AUTH STATE LISTENER ==========
+  // Auth state listener
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       if (!user.emailVerified) {
