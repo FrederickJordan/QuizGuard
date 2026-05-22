@@ -7,16 +7,10 @@ import {
   signInWithPopup,
   sendEmailVerification
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from './firebase-config.js';
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { getEl, addLog } from './utils.js';
 
-/** Prevents onAuthStateChanged from signing out mid-registration before role is saved */
-export let isRegistering = false;
-
-function normalizeRole(role) {
-  return String(role || '').toLowerCase().trim() === 'teacher' ? 'teacher' : 'student';
-}
+const db = getFirestore();
 
 export function showAuthMessage(message, isSuccess = false) {
   const msgDiv = getEl("authMessage");
@@ -25,7 +19,7 @@ export function showAuthMessage(message, isSuccess = false) {
   msgDiv.className = `auth-message ${isSuccess ? 'success' : 'error'}`;
   msgDiv.style.display = 'block';
   if (isSuccess) {
-    setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+    setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
   }
 }
 
@@ -65,72 +59,32 @@ export async function handleRegister(email, password, role = "student") {
     showAuthMessage("Password must be at least 6 characters.", false);
     return;
   }
-
-  const normalizedRole = normalizeRole(role);
-  console.log(`[Register] Selected role: "${role}" → saving as "${normalizedRole}"`);
-
-  isRegistering = true;
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    const userDocRef = doc(db, "users", user.uid);
-
-    // Save role to Firestore while user is signed in
-    await setDoc(
-      userDocRef,
-      {
-        email: user.email,
-        role: normalizedRole,
-        createdAt: new Date().toISOString(),
-        emailVerified: false,
-      },
-      { merge: true }
-    );
-
-    // Verify the role was saved correctly
-    const verifySnap = await getDoc(userDocRef);
-    const savedRole = verifySnap.data()?.role;
-    console.log(`[Register] Firestore role after save: "${savedRole}"`);
-    
-    if (savedRole !== normalizedRole) {
-      throw new Error(
-        `Could not save ${normalizedRole} role (Firestore has "${savedRole || 'none'}"). Check Firestore security rules.`
-      );
-    }
-
-    addLog(`User role "${normalizedRole}" stored for ${user.email}`);
-    
-    // Send verification email
     await sendEmailVerification(user);
-    
-    // Sign out so user must verify email before logging in
-    // This is IMPORTANT - we sign out AFTER verification email is sent
-    // but we need to do it BEFORE clearing isRegistering flag
-    await signOut(auth);
-    
-    showAuthMessage(
-      `Account created as ${normalizedRole}. Verification email sent to ${email}. Please verify your email, then log in.`,
-      true
-    );
+    showAuthMessage(`Verification email sent to ${user.email}. Please verify before logging in.`, true);
     addLog(`Verification email sent to ${user.email}`);
     
+    // Save user role – this document will later also contain the questionBank
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, {
+      email: user.email,
+      role: role,
+      createdAt: new Date().toISOString(),
+      emailVerified: false
+    });
+    addLog(`User role "${role}" stored for ${user.email}`);
+    
+    await signOut(auth);
   } catch (error) {
     let errorMsg = "Registration failed. ";
-    if (error.code === 'auth/email-already-in-use') {
-      errorMsg += "Email already registered — log in or use a new email.";
-    } else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
+    if (error.code === 'auth/email-already-in-use') errorMsg += "Email already registered.";
+    else if (error.code === 'auth/invalid-email') errorMsg += "Invalid email format.";
     else if (error.code === 'auth/weak-password') errorMsg += "Password too weak.";
     else errorMsg += error.message;
     showAuthMessage(errorMsg, false);
-    addLog(`Registration error: ${error?.code || error.message}`);
-    console.error('[Register] failed:', error);
-    
-    // Only sign out if there was an error and user exists
-    if (auth.currentUser) {
-      await signOut(auth);
-    }
-  } finally {
-    isRegistering = false;
+    addLog(`Registration error: ${error.code}`);
   }
 }
 
@@ -144,21 +98,14 @@ export async function handleGoogleSignIn() {
       showAuthMessage("Your Google email is not verified. Please verify it.", false);
       return;
     }
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
+    const userDoc = await getDoc(doc(db, "users", user.uid));
     if (!userDoc.exists()) {
-      await setDoc(
-        userDocRef,
-        {
-          email: user.email,
-          role: "student",
-          createdAt: new Date().toISOString(),
-          emailVerified: true,
-        },
-        { merge: true }
-      );
-    } else if (!userDoc.data().role) {
-      await setDoc(userDocRef, { role: "student" }, { merge: true });
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        role: "student",
+        createdAt: new Date().toISOString(),
+        emailVerified: true
+      });
     }
     showAuthMessage(`Welcome, ${user.displayName || user.email}!`, true);
     addLog(`Google sign-in: ${user.email}`);
