@@ -8,6 +8,7 @@ import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } f
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
 import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
+import { openDataLogScreen, closeDataLogScreen } from './historyLog.js';
 
 const db = getFirestore();
 let currentUserRole = null;
@@ -72,62 +73,6 @@ async function getUserRole(userId, email) {
   }
   await setDoc(docRef, { email, role: "student", createdAt: new Date().toISOString() });
   return "student";
-}
-
-// ========== STUDENT HISTORY (with modal) ==========
-async function loadStudentHistory() {
-  const container = document.getElementById('historyLogContainer');
-  if (!container) return;
-
-  const user = auth.currentUser;
-  if (!user) {
-    container.innerHTML = `<div style="text-align:center; padding:40px;">Please log in to view history.</div>`;
-    return;
-  }
-
-  try {
-    const q = query(collection(db, "quizResults"), where("userId", "==", user.uid));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      container.innerHTML = `<div style="text-align:center; padding:40px;">No quiz history found.</div>`;
-      return;
-    }
-
-    const results = [];
-    snapshot.forEach(doc => results.push({ id: doc.id, ...doc.data() }));
-    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    let html = '';
-    results.forEach(data => {
-      const date = new Date(data.timestamp).toLocaleString();
-      const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
-      html += `
-        <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; border-left:4px solid ${scoreColor};">
-          <div style="display:flex; justify-content:space-between;">
-            <strong>${escapeHtml(data.subject || 'Quiz')}</strong>
-            <span style="font-size:24px;">${data.score}/100</span>
-          </div>
-          <div style="color:#64748b; font-size:13px;">${date}</div>
-          <div style="margin:8px 0;">Penalties: ${data.penalties || 0} | Tab switches: ${data.tabSwitches || 0}</div>
-          <button class="viewStudentDetails" data-id="${data.id}" data-subject="${escapeHtml(data.subject || 'Quiz')}" data-wrong='${JSON.stringify(data.wrongAnswers || [])}' data-feedback="${escapeHtml(data.aiFeedback || '')}" style="background:#2563eb; color:white; border:none; padding:4px 12px; border-radius:8px; cursor:pointer;">View Details</button>
-        </div>
-      `;
-    });
-    container.innerHTML = html;
-
-    document.querySelectorAll('.viewStudentDetails').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const title = btn.dataset.subject;
-        let wrong = [];
-        try { wrong = JSON.parse(btn.dataset.wrong); } catch(e) { wrong = []; }
-        const feedback = btn.dataset.feedback || 'No AI feedback available.';
-        showDetailsModal(title, wrong, feedback);
-      });
-    });
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `<div style="text-align:center; padding:40px;">Error loading history.</div>`;
-  }
 }
 
 // ========== TEACHER DASHBOARD (with modal) ==========
@@ -216,20 +161,14 @@ document.addEventListener('DOMContentLoaded', () => {
     else { errDiv.innerText = ""; await joinQuizByCode(code); }
   });
 
-  // Teacher dashboard and student history
+  // Teacher dashboard and quiz data log
   el("teacherDashboardBtn")?.addEventListener('click', showTeacherDashboard);
-  el("studentHistoryBtn")?.addEventListener('click', () => {
-    const overlay = el("historyLogOverlay");
-    if (overlay) { loadStudentHistory(); overlay.style.display = "block"; }
-  });
+  el("openDataLogBtn")?.addEventListener('click', openDataLogScreen);
+  el("closeDataLogBtn")?.addEventListener('click', closeDataLogScreen);
 
   // Close overlays
-  const closeHistory = document.getElementById("closeHistoryLog");
-  if (closeHistory) closeHistory.onclick = () => document.getElementById("historyLogOverlay").style.display = "none";
   const closeTeacher = document.getElementById("closeTeacherResults");
   if (closeTeacher) closeTeacher.onclick = () => document.getElementById("teacherResultsOverlay").style.display = "none";
-  const historyOverlay = document.getElementById("historyLogOverlay");
-  if (historyOverlay) historyOverlay.addEventListener('click', (e) => { if (e.target === historyOverlay) historyOverlay.style.display = "none"; });
   const teacherOverlay = document.getElementById("teacherResultsOverlay");
   if (teacherOverlay) teacherOverlay.addEventListener('click', (e) => { if (e.target === teacherOverlay) teacherOverlay.style.display = "none"; });
 
