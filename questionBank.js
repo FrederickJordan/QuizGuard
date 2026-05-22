@@ -22,7 +22,6 @@ export function getDefaultQuestionBank() {
         { question: "What is the median of 3, 7, 9, 2, 5?", answers: ["5", "7", "6", "4"], correct: 0 },
         { question: "What is 20% of 250?", answers: ["50", "25", "40", "60"], correct: 0 },
         { question: "What is the volume of a cube with side 4?", answers: ["64", "16", "12", "48"], correct: 0 },
-        { question: "If a = 3 and b = 4, what is a² + b²?", answers: ["25", "12", "7", "49"], correct: 0 }
       ],
       hard: [
         { question: "What is the integral of 2x dx?", answers: ["x² + C", "2x² + C", "x + C", "x²"], correct: 0 },
