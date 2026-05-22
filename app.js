@@ -3,7 +3,7 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
@@ -38,7 +38,7 @@ async function getUserRole(userId, email) {
   return "student";
 }
 
-// ========== STUDENT HISTORY (embedded from historyLog.js) ==========
+// ========== STUDENT HISTORY (client‑side sort, no index) ==========
 async function loadStudentHistory() {
   const container = document.getElementById('historyLogContainer');
   if (!container) return;
@@ -50,10 +50,10 @@ async function loadStudentHistory() {
   }
 
   try {
+    // Query without orderBy to avoid index requirement
     const q = query(
       collection(db, "quizResults"),
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
+      where("userId", "==", user.uid)
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
@@ -61,9 +61,15 @@ async function loadStudentHistory() {
       return;
     }
 
-    let html = '';
+    // Convert to array and sort by timestamp descending
+    const results = [];
     snapshot.forEach(doc => {
-      const data = doc.data();
+      results.push({ id: doc.id, ...doc.data() });
+    });
+    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    let html = '';
+    results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
       html += `
@@ -84,7 +90,7 @@ async function loadStudentHistory() {
   }
 }
 
-// ========== TEACHER DASHBOARD (no index required) ==========
+// ========== TEACHER DASHBOARD (client‑side sort, no index) ==========
 async function showTeacherDashboard() {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) {
@@ -152,7 +158,7 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
       </tr>`;
     });
-    html += '</tbody></table>';
+    html += '</tbody><table>';
     container.innerHTML = html;
 
     // Attach event listeners to "View" buttons
@@ -219,8 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el("studentHistoryBtn")?.addEventListener('click', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) {
-      // Load history every time the overlay is opened
-      loadStudentHistory();
+      loadStudentHistory(); // load data every time it opens
       overlay.style.display = "block";
     }
   });
