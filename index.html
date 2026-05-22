@@ -113,7 +113,7 @@
         <button class="home-btn start-btn" id="startQuizBtn">▶ Start Quiz</button>
         <button class="home-btn editor-btn" id="openEditorBtn" style="display: none;">✏ Edit Questions</button>
         <button class="home-btn editor-btn" id="teacherDashboardBtn" style="display: none; background: #8b5cf6; color: white;">📊 Quiz Results</button>
-        <button class="home-btn editor-btn" id="studentHistoryBtn" style="background: #3b82f6; color: white;">📜 My History</button>
+        <button class="home-btn editor-btn" id="openDataLogBtn" style="background: #3b82f6; color: white;">📋 Quiz Data Log</button>
         <!-- How to Play button placed here, before Logout -->
         <button id="howToPlayBtn" class="home-btn editor-btn" style="background: #8b5cf6; color: white;">🎮 How to Play</button>
         <button class="home-btn editor-btn" id="logoutBtn" style="background:#ef4444; color:white;">🚪 Logout</button>
@@ -158,6 +158,32 @@
         <button class="home-btn start-btn" id="addQuestionBtn">Add Question</button>
       </div>
       <div id="publishMessage" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
+  </div>
+
+  <!-- QUIZ DATA LOG SCREEN -->
+  <div id="dataLogScreen" class="editor-screen" style="display: none;">
+    <div class="editor-container data-log-container">
+      <div class="editor-top">
+        <h1>📋 Quiz Data Log</h1>
+        <button type="button" class="back-btn" id="closeDataLogBtn">← Back to Home</button>
+      </div>
+      <p class="data-log-intro">All your past quiz attempts. Select one to see scores, penalties, tab switches, wrong answers, and AI review.</p>
+      <div id="dataLogSummary"></div>
+      <div class="data-log-layout">
+        <aside class="data-log-list-panel">
+          <h2 class="data-log-panel-title">Attempts</h2>
+          <div id="dataLogList" class="data-log-list">
+            <p class="data-log-loading">Loading…</p>
+          </div>
+        </aside>
+        <main class="data-log-detail-panel">
+          <h2 class="data-log-panel-title">Attempt details</h2>
+          <div id="dataLogDetail" class="data-log-detail">
+            <p class="data-log-placeholder">Select an attempt from the list to view full details.</p>
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 
@@ -210,19 +236,6 @@
     <p class="home-subtitle" style="margin-bottom: 30px;">Student performance on your published quizzes</p>
     <div id="teacherResultsContainer">
       <p style="text-align: center; padding: 40px; color: #6b7280;">Loading results...</p>
-    </div>
-  </div>
-</div>
-
-<!-- STUDENT HISTORY OVERLAY -->
-<div id="historyLogOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto; padding: 40px 20px;">
-  <div style="max-width: 900px; margin: 0 auto; background: white; border-radius: 30px; padding: 40px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-    <button id="closeHistoryLog" style="position: absolute; top: 20px; right: 25px; background: #ef4444; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; font-weight: bold;">&times;</button>
-    <div class="logo-badge" style="margin: 0 auto 20px; width: 70px; height: 70px; font-size: 28px;">QG</div>
-    <h1 class="home-title" style="font-size: 36px; margin-bottom: 10px;">📜 History Log</h1>
-    <p class="home-subtitle" style="margin-bottom: 30px;">Your past quiz performances</p>
-    <div id="historyLogContainer">
-      <p style="text-align: center; padding: 40px; color: #6b7280;">Loading your history...</p>
     </div>
   </div>
 </div>
