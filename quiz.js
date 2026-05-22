@@ -3,7 +3,7 @@ import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
 import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
 import { db, auth } from './firebase-config.js';
-import { collection, addDoc, doc, setDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 let questions = [];
 let currentQuestion = 0;
@@ -23,30 +23,66 @@ let currentQuizDifficulty = null;
 function showAiFeedback(text) {
   const feedbackBox = getEl("aiFeedbackResults");
   if (!feedbackBox) return;
+  
   feedbackBox.style.display = "block";
-  feedbackBox.textContent = text;
+  
+  // Convert line breaks to HTML and preserve formatting
+  const formattedText = text
+    .replace(/\n/g, '<br>')
+    .replace(/Question \d+:/g, match => `<strong style="color: #2563eb;">${match}</strong>`)
+    .replace(/🎉/g, '<span style="font-size: 20px;">🎉</span>');
+  
+  feedbackBox.innerHTML = `
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                border-radius: 16px; padding: 20px; color: white;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <span style="font-size: 28px;">🤖</span>
+        <h3 style="margin: 0; font-size: 20px;">AI Review - What You Missed</h3>
+      </div>
+      <div style="line-height: 1.8; font-size: 15px;">${formattedText}</div>
+    </div>
+  `;
 }
 
 function clearAiFeedback() {
   const feedbackBox = getEl("aiFeedbackResults");
   if (!feedbackBox) return;
   feedbackBox.style.display = "none";
-  feedbackBox.textContent = "";
+  feedbackBox.innerHTML = "";
 }
 
 async function requestAiFeedback(wrongAnswers) {
+  // IMPORTANT: Replace with YOUR Cloudflare Worker URL
+  const WORKER_URL = "https://quiz-ai-assistant.yourusername.workers.dev";
+  
+  console.log(`Sending ${wrongAnswers.length} wrong answers to AI for analysis`);
+  
   try {
-    const response = await fetch("https://quizguardslave.17fjsetiawan.workers.dev/", {
+    const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wrongAnswers })
     });
-    if (!response.ok) throw new Error(`AI endpoint error ${response.status}`);
+    
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    return data.feedback || "AI feedback is unavailable right now.";
-  } catch (err) {
-    console.error("AI feedback error:", err);
-    return "AI feedback temporarily unavailable.";
+    
+    return data.feedback || "AI analysis complete! Review the explanations above.";
+    
+  } catch (error) {
+    console.error("AI fetch error:", error);
+    
+    // Fallback showing correct answers without AI
+    let fallbackFeedback = `📝 Review Your Mistakes\n\n`;
+    
+    wrongAnswers.forEach((wa, i) => {
+      fallbackFeedback += `Question ${i+1}: ${wa.question}\n`;
+      fallbackFeedback += `❌ You answered: ${wa.selectedAnswer}\n`;
+      fallbackFeedback += `✅ Correct answer: ${wa.correctAnswer}\n`;
+      fallbackFeedback += `💡 ${wa.correctAnswer} is the correct answer.\n\n`;
+    });
+    
+    return fallbackFeedback;
   }
 }
 
@@ -71,28 +107,25 @@ export function failCurrentQuestion(reason) {
   addLog(`Question failed: ${reason}`);
 }
 
-async function saveQuizResults(aiFeedbackText) {
+async function saveQuizResults() {
   const user = auth.currentUser;
   if (!user) return;
-  try {
-    await addDoc(collection(db, "quizResults"), {
-      userId: user.uid,
-      userEmail: user.email,
-      code: currentQuizCode || "manual",
-      subject: currentQuizSubject,
-      difficulty: currentQuizDifficulty,
-      score: Math.floor(score),
-      penalties: penalties,
-      failures: failures,
-      tabSwitches: tabSwitches,
-      wrongAnswers: wrongAnswers,
-      aiFeedback: aiFeedbackText,
-      timestamp: new Date().toISOString()
-    });
-    addLog("Quiz results saved.");
-  } catch (err) {
-    console.error("Save results error:", err);
-  }
+  const aiFeedbackText = getEl("aiFeedbackResults")?.textContent || "";
+  await addDoc(collection(db, "quizResults"), {
+    userId: user.uid,
+    userEmail: user.email,
+    code: currentQuizCode || "manual",
+    subject: currentQuizSubject,
+    difficulty: currentQuizDifficulty,
+    score: Math.floor(score),
+    penalties: penalties,
+    failures: failures,
+    tabSwitches: tabSwitches,
+    wrongAnswers: wrongAnswers,
+    aiFeedback: aiFeedbackText,
+    timestamp: new Date().toISOString()
+  });
+  addLog("Quiz results saved.");
 }
 
 function startQuizWithQuestions(qlist, selectedMinigame, code = null, subject = null, difficulty = null) {
@@ -243,24 +276,25 @@ export async function endQuiz() {
   quizActive = false;
   setQuizActive(false);
   hidePauseOverlay();
-
-  let aiFeedbackText = "";
-  if (wrongAnswers.length > 0) {
-    showAiFeedback("Generating AI feedback for your incorrect answers...");
-    aiFeedbackText = await requestAiFeedback(wrongAnswers);
-    showAiFeedback(aiFeedbackText);
-  } else {
-    clearAiFeedback();
-    aiFeedbackText = "No wrong answers! Perfect score!";
-  }
-  
-  await saveQuizResults(aiFeedbackText);
-  
   getEl("quizContent").style.display = "none";
   getEl("resultsScreen").style.display = "block";
   getEl("finalScore").textContent = Math.floor(score);
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
+
+  let aiFeedbackText = "";
+  if (wrongAnswers.length > 0) {
+    showAiFeedback("Generating AI feedback for your incorrect answers...");
+    try {
+      aiFeedbackText = await requestAiFeedback(wrongAnswers);
+      showAiFeedback(aiFeedbackText);
+    } catch {
+      showAiFeedback("Unable to fetch AI feedback right now.");
+    }
+  } else {
+    clearAiFeedback();
+  }
+  await saveQuizResults();
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
 
