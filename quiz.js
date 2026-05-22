@@ -3,7 +3,7 @@ import { questionBank } from './questionBank.js';
 import { stopMinigames, startCupGame, startQTEGame, setMinigameQuizPaused, setApplyPenaltyCallback } from './minigames.js';
 import { requestFullscreenMode, setQuizActive, setQuizPaused, hidePauseOverlay, setPendingFailureCallback, setMinigamePauseCallback, resetFullscreenExitAttempts } from './anticheat.js';
 import { db, auth } from './firebase-config.js';
-import { collection, addDoc, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
 
 let questions = [];
 let currentQuestion = 0;
