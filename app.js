@@ -3,35 +3,42 @@ console.log("=== app.js started ===");
 import { getEl, addLog } from './utils.js';
 import { auth } from './firebase-config.js';
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
 import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
-import { openTutorial } from './tutorial.js';
 
 const db = getFirestore();
 let currentUserRole = null;
 
 window.questionBank = questionBank;
 
-// Function to get role with retries
+// Helper to escape HTML
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// Get role with retries (handles Firestore propagation delay)
 async function getUserRole(userId, email) {
   const docRef = doc(db, "users", userId);
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 5; i++) {
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const role = snap.data().role;
-      console.log(`Role found after ${i+1} attempts: ${role}`);
+      console.log(`✅ Role found after ${i+1} attempts: ${role}`);
       return role;
     }
+    console.log(`⏳ Attempt ${i+1}/20: Document not found, waiting 300ms...`);
     await new Promise(r => setTimeout(r, 300));
   }
+  console.warn("❌ No document after retries. Creating default student role.");
   await setDoc(docRef, { email, role: "student", createdAt: new Date().toISOString() });
   return "student";
 }
 
-// ========== TEACHER DASHBOARD ==========
+// ========== TEACHER DASHBOARD (no index required) ==========
 async function showTeacherDashboard() {
   const teacherUid = auth.currentUser?.uid;
   if (!teacherUid) {
@@ -56,14 +63,21 @@ async function showTeacherDashboard() {
     }
 
     const codeList = codesSnap.docs.map(doc => doc.data().code);
-    // 2. Get all quiz results for those codes
-    const resultsQuery = query(collection(db, "quizResults"), where("code", "in", codeList), orderBy("timestamp", "desc"));
+    // 2. Get all quiz results for those codes (without orderBy to avoid index)
+    const resultsQuery = query(collection(db, "quizResults"), where("code", "in", codeList));
     const resultsSnap = await getDocs(resultsQuery);
 
     if (resultsSnap.empty) {
       container.innerHTML = '<p style="text-align: center; padding: 40px;">No student results yet.</p>';
       return;
     }
+
+    // Convert to array and sort by timestamp descending (client-side)
+    const results = [];
+    resultsSnap.forEach(doc => {
+      results.push({ id: doc.id, ...doc.data() });
+    });
+    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     // 3. Build HTML table
     let html = '<table style="width:100%; border-collapse: collapse; text-align: left;">';
@@ -78,8 +92,7 @@ async function showTeacherDashboard() {
       <th style="padding: 12px;">Details</th>
     </tr></thead><tbody>`;
 
-    resultsSnap.forEach(doc => {
-      const data = doc.data();
+    results.forEach(data => {
       const date = new Date(data.timestamp).toLocaleString();
       const scoreColor = data.score >= 70 ? '#22c55e' : (data.score >= 40 ? '#f59e0b' : '#ef4444');
       html += `<tr style="border-bottom: 1px solid #e2e8f0;">
@@ -90,8 +103,8 @@ async function showTeacherDashboard() {
         <td style="padding: 12px;">${data.penalties || 0}</td>
         <td style="padding: 12px;">${data.tabSwitches || 0}</td>
         <td style="padding: 12px;">${date}</td>
-        <td style="padding: 12px;"><button class="viewResultDetails" data-id="${doc.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
-      </tr>`;
+        <td style="padding: 12px;"><button class="viewResultDetails" data-id="${data.id}" style="background: #2563eb; color: white; border: none; padding: 4px 12px; border-radius: 8px; cursor: pointer;">View</button></td>
+      </td>`;
     });
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -103,16 +116,13 @@ async function showTeacherDashboard() {
         const resultDoc = await getDoc(doc(db, "quizResults", resultId));
         if (resultDoc.exists()) {
           const data = resultDoc.data();
-          let wrongHtml = '';
+          let wrongList = '';
           if (data.wrongAnswers && data.wrongAnswers.length) {
-            wrongHtml = '<div style="margin-top: 15px;"><strong>Wrong Answers:</strong><ul>';
-            data.wrongAnswers.forEach(w => {
-              wrongHtml += `<li><strong>${escapeHtml(w.question)}</strong><br>Your answer: ${escapeHtml(w.selectedAnswer)}<br>Correct: ${escapeHtml(w.correctAnswer)}</li>`;
-            });
-            wrongHtml += '</ul></div>';
+            wrongList = data.wrongAnswers.map(w => `Q: ${w.question}\n   Your: ${w.selectedAnswer}\n   Correct: ${w.correctAnswer}`).join('\n\n');
+          } else {
+            wrongList = 'None';
           }
-          const feedbackHtml = data.aiFeedback ? `<div style="margin-top: 15px;"><strong>AI Feedback:</strong><br>${escapeHtml(data.aiFeedback)}</div>` : '';
-          alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${data.wrongAnswers?.map(w => `Q: ${w.question}\nSelected: ${w.selectedAnswer}\nCorrect: ${w.correctAnswer}`).join('\n\n') || 'None'}\n\nAI Feedback:\n${data.aiFeedback || 'None'}`);
+          alert(`Student: ${data.userEmail}\nScore: ${data.score}/100\nPenalties: ${data.penalties}\nTab switches: ${data.tabSwitches}\n\nWrong Answers:\n${wrongList}\n\nAI Feedback:\n${data.aiFeedback || 'None'}`);
         }
       });
     });
@@ -120,11 +130,6 @@ async function showTeacherDashboard() {
     console.error("Teacher dashboard error:", err);
     container.innerHTML = '<p style="text-align: center; padding: 40px; color: #ef4444;">Error loading results.</p>';
   }
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
 // ========== DOM CONTENT LOADED ==========
@@ -169,13 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = el("historyLogOverlay");
     if (overlay) overlay.style.display = "block";
   });
-  
-  // TUTORIAL
-  el("tutorialBtn")?.addEventListener('click', () => {
-    import('./tutorial.js').then(module => {
-      module.openTutorial(false);
-    });
-  });
 
   // Close buttons for overlays
   const closeHistory = document.getElementById("closeHistoryLog");
@@ -189,30 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const teacherOverlay = document.getElementById("teacherResultsOverlay");
   if (teacherOverlay) teacherOverlay.addEventListener('click', (e) => { if (e.target === teacherOverlay) teacherOverlay.style.display = "none"; });
 
-// TUTORIAL close
-  const closeTutorialBtn = document.getElementById("closeTutorial");
-  if (closeTutorialBtn) {
-    closeTutorialBtn.addEventListener('click', () => {
-      document.getElementById('tutorialModal').style.display = 'none';
-    });
-  }
-
-  const closeTutorialModalBtn = document.getElementById("closeTutorialBtn");
-  if (closeTutorialModalBtn) {
-    closeTutorialModalBtn.addEventListener('click', () => {
-      document.getElementById('tutorialModal').style.display = 'none';
-    });
-  }
-
-  const tutorialModal = document.getElementById("tutorialModal");
-  if (tutorialModal) {
-    tutorialModal.addEventListener('click', (e) => {
-      if (e.target === tutorialModal) {
-        tutorialModal.style.display = 'none';
-      }
-    });
-  }
-  
   // Editor buttons (teacher only)
   el("openEditorBtn")?.addEventListener('click', () => {
     if (currentUserRole !== "teacher") return alert("Only teachers can edit questions.");
