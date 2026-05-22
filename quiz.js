@@ -113,7 +113,7 @@ export function failCurrentQuestion(reason) {
   // Record the failure
   failures++;
   
-  // Add to wrong answers array for AI analysis
+  // CRITICAL: Add to wrongAnswers array for AI analysis
   if (currentQ) {
     const correctAnswerText = currentQ.answers[currentQ.correct];
     wrongAnswers.push({
@@ -121,13 +121,13 @@ export function failCurrentQuestion(reason) {
       selectedAnswer: `[FAILED - ${reason}]`,
       correctAnswer: correctAnswerText
     });
-    addLog(`❌ Question failed: ${reason}`);
+    addLog(`❌ Question failed: ${reason} - Added to wrongAnswers`);
   }
   
   // Move to next question
   currentQuestion++;
   
-  // Load next question if quiz is still active
+  // Load next question if quiz still active
   if (quizActive && currentQuestion < questions.length) {
     loadQuestion();
   } else if (currentQuestion >= questions.length) {
