@@ -20,13 +20,14 @@ let currentQuizCode = null;
 let currentQuizSubject = null;
 let currentQuizDifficulty = null;
 
+// ========== AI FEEDBACK FUNCTIONS ==========
+
 function showAiFeedback(text) {
   const feedbackBox = getEl("aiFeedbackResults");
   if (!feedbackBox) return;
   
   feedbackBox.style.display = "block";
   
-  // Convert line breaks to HTML and preserve formatting
   const formattedText = text
     .replace(/\n/g, '<br>')
     .replace(/Question \d+:/g, match => `<strong style="color: #2563eb;">${match}</strong>`)
@@ -52,39 +53,43 @@ function clearAiFeedback() {
 }
 
 async function requestAiFeedback(wrongAnswers) {
-  // IMPORTANT: Replace with YOUR Cloudflare Worker URL
-  const WORKER_URL = "https://quiz-ai-assistant.yourusername.workers.dev";
+  const WORKER_URL = "https://quizguardslave.17fjsetiawan.workers.dev";
   
-  console.log(`Sending ${wrongAnswers.length} wrong answers to AI for analysis`);
+  console.log(`📤 Sending ${wrongAnswers.length} wrong answers to AI:`, wrongAnswers);
   
   try {
     const response = await fetch(WORKER_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ wrongAnswers })
+      headers: { 
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ wrongAnswers: wrongAnswers })
     });
     
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
+    console.log(`📥 Response status: ${response.status}`);
     
-    return data.feedback || "AI analysis complete! Review the explanations above.";
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ AI Response received:", data);
+    return data.feedback || "AI analysis complete!";
     
   } catch (error) {
-    console.error("AI fetch error:", error);
+    console.error("❌ AI fetch error:", error);
     
-    // Fallback showing correct answers without AI
     let fallbackFeedback = `📝 Review Your Mistakes\n\n`;
-    
     wrongAnswers.forEach((wa, i) => {
-      fallbackFeedback += `Question ${i+1}: ${wa.question}\n`;
-      fallbackFeedback += `❌ You answered: ${wa.selectedAnswer}\n`;
-      fallbackFeedback += `✅ Correct answer: ${wa.correctAnswer}\n`;
-      fallbackFeedback += `💡 ${wa.correctAnswer} is the correct answer.\n\n`;
+      fallbackFeedback += `${i+1}. ${wa.question}\n`;
+      fallbackFeedback += `   ❌ Your answer: ${wa.selectedAnswer}\n`;
+      fallbackFeedback += `   ✅ Correct: ${wa.correctAnswer}\n\n`;
     });
-    
     return fallbackFeedback;
   }
 }
+
+// ========== EXISTING QUIZ FUNCTIONS ==========
 
 export function updateStats() {
   getEl("score").textContent = Math.floor(score);
@@ -256,7 +261,7 @@ export function loadQuestion() {
         if (score > 100) score = 100;
         addLog(`Correct +${pointsPerCorrect.toFixed(1)} → ${Math.floor(score)}`);
       } else {
-        addLog("Wrong answer.");
+        addLog("Wrong answer recorded.");
         wrongAnswers.push({
           question: q.question,
           selectedAnswer: answerOptions[selectedAnswerIndex].text,
@@ -282,18 +287,30 @@ export async function endQuiz() {
   getEl("finalFailures").textContent = failures;
   getEl("finalTabs").textContent = tabSwitches;
 
+  console.log(`🎯 Quiz ended. Wrong answers count: ${wrongAnswers.length}`);
+  
   let aiFeedbackText = "";
   if (wrongAnswers.length > 0) {
-    showAiFeedback("Generating AI feedback for your incorrect answers...");
+    const feedbackBox = getEl("aiFeedbackResults");
+    if (feedbackBox) {
+      feedbackBox.style.display = "block";
+      feedbackBox.innerHTML = "🤔 AI is analyzing your answers... Please wait.";
+    }
+    
     try {
       aiFeedbackText = await requestAiFeedback(wrongAnswers);
+      console.log("🎉 AI feedback generated");
       showAiFeedback(aiFeedbackText);
-    } catch {
-      showAiFeedback("Unable to fetch AI feedback right now.");
+    } catch (error) {
+      console.error("AI failed:", error);
+      showAiFeedback(`📝 Review Your Mistakes\n\n${wrongAnswers.map((wa, i) => 
+        `${i+1}. Correct answer: ${wa.correctAnswer}\n`
+      ).join('\n')}`);
     }
   } else {
-    clearAiFeedback();
+    showAiFeedback("🎉 PERFECT SCORE! 🎉\n\nExcellent work!");
   }
+  
   await saveQuizResults();
   addLog(`Quiz finished. Score: ${Math.floor(score)}/100`);
 }
