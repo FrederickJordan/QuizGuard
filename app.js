@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase
 import { loadQuestionBankFromFirestore, getDefaultQuestionBank, questionBank } from './questionBank.js';
 import { startQuiz, returnToHome, joinQuizByCode } from './quiz.js';
 import { renderSubjectsList, renderQuestionEditor, addNewQuestion, addNewSubject, updateSubjectDropdowns } from './editor.js';
-import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage } from './auth.js';
+import { handleLogin, handleRegister, handleGoogleSignIn, showAuthMessage, isRegistering } from './auth.js';
 
 let currentUserRole = null;
 let cachedAttempts = [];
@@ -67,12 +67,13 @@ async function getUserRole(userId, email) {
     try {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        const role = snap.data().role;
+        const data = snap.data();
+        const role = String(data.role || '').toLowerCase().trim();
         if (role === "teacher" || role === "student") {
-          console.log(`✅ Role found after ${i + 1} attempt(s): ${role}`);
+          console.log(`✅ Role found after ${i + 1} attempt(s): ${role}`, data);
           return role;
         }
-        console.warn("User doc exists but role missing/invalid:", snap.data());
+        console.warn("User doc exists but role missing/invalid:", data);
       }
     } catch (err) {
       console.warn(`getUserRole read attempt ${i + 1} failed:`, err);
@@ -375,7 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auth buttons
   el("loginBtn")?.addEventListener('click', () => handleLogin(el("loginEmail")?.value, el("loginPassword")?.value));
   el("registerBtn")?.addEventListener('click', () => {
-    const role = el("registerRole")?.value || "student";
+    const roleSelect = el("registerRole");
+    const role = roleSelect?.value ?? "student";
+    console.log("[Register] Dropdown value:", role);
     handleRegister(el("loginEmail")?.value, el("loginPassword")?.value, role);
   });
   el("googleSignInBtn")?.addEventListener('click', handleGoogleSignIn);
@@ -522,6 +525,8 @@ document.addEventListener('DOMContentLoaded', () => {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       if (!user.emailVerified) {
+        // Don't sign out during register — that can cancel the role write to Firestore
+        if (isRegistering) return;
         showAuthMessage("Please verify your email.", false);
         await signOut(auth);
         return;
