@@ -62,16 +62,42 @@ function showDetailsModal(title, wrongAnswers, aiFeedback) {
 
 async function getUserRole(userId, email) {
   const docRef = doc(db, "users", userId);
-  for (let i = 0; i < 20; i++) {
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const role = snap.data().role;
-      console.log(`✅ Role found after ${i+1} attempts: ${role}`);
-      return role;
+
+  for (let i = 0; i < 30; i++) {
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const role = snap.data().role;
+        if (role === "teacher" || role === "student") {
+          console.log(`✅ Role found after ${i + 1} attempt(s): ${role}`);
+          return role;
+        }
+        console.warn("User doc exists but role missing/invalid:", snap.data());
+      }
+    } catch (err) {
+      console.warn(`getUserRole read attempt ${i + 1} failed:`, err);
     }
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 300));
   }
-  await setDoc(docRef, { email, role: "student", createdAt: new Date().toISOString() });
+
+  // One final read — never overwrite an existing teacher profile
+  try {
+    const finalSnap = await getDoc(docRef);
+    if (finalSnap.exists()) {
+      const role = finalSnap.data().role;
+      return role === "teacher" ? "teacher" : "student";
+    }
+  } catch (err) {
+    console.error("getUserRole final read failed:", err);
+    return "student";
+  }
+
+  // Only for accounts with no Firestore profile yet (e.g. legacy Google users)
+  await setDoc(
+    docRef,
+    { email, role: "student", createdAt: new Date().toISOString() },
+    { merge: true }
+  );
   return "student";
 }
 
